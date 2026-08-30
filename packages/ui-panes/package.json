@@ -1,0 +1,33 @@
+{
+  "name": "@vagus/ui-panes",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Vagus layout panes — chat pane, welcome pane, shared input card, dialogs",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@vagus/ui-shared": "workspace:*",
+    "@vagus/ui-tokens": "workspace:*",
+    "@vagus/ui-chat": "workspace:*",
+    "@vagus/ui-input": "workspace:*",
+    "@vagus/ui-hooks": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "references": [
+    { "path": "./packages/protocol" },
+    { "path": "./packages/host/events" },
+    { "path": "./packages/host/config" },
+    { "path": "./packages/host/models" },
+    { "path": "./packages/host/engine" },
+    { "path": "./packages/host/rpc" },
+    { "path": "./packages/mcp-extension" },
+    { "path": "./apps/cli" }
+  ]
+}

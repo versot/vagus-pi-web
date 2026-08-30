@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "import"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "warn"
+  },
+  "rules": {
+    "typescript/no-explicit-any": "error",
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-unused-vars": ["error", { "args": "none" }],
+    "no-console": "off",
+    // path-basename idioms (.filter(Boolean).pop()) — find has different
+    // semantics (last vs first); keep the warning-free convention.
+    "unicorn/prefer-array-find": "off",
+    // e2e tests deliberately await steps in sequence.
+    "no-await-in-loop": "off"
+  }
+}

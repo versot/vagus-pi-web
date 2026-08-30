@@ -1,0 +1,33 @@
+{
+  "name": "@versot/vaguspi",
+  "version": "0.1.0",
+  "description": "pi-web — a web frontend for the pi coding agent. Launch the full chat UI in your browser with one command.",
+  "keywords": ["pi", "pi-web", "pi-package", "gui", "web-ui", "mcp"],
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "pi-web": "./dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "gui",
+    "extensions",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "0.84.2",
+    "@earendil-works/pi-ai": "0.84.2",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "diff": "8.0.4",
+    "typebox": "1.3.7",
+    "undici": "^8.0.0",
+    "ws": "^8.21.3"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "node scripts/build-npx.mjs"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@vagus/protocol",
+  "version": "0.0.0",
+  "description": "Wire protocol and contract schemas for Vagus: JSON-RPC frames, typed events, and the adapter manifest.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  }
+}

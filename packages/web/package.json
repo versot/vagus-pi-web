@@ -1,0 +1,35 @@
+{
+  "name": "@vagus/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Vagus web application — the assembled React app (connection, event routing, view switching)",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@vagus/ui-shared": "workspace:*",
+    "@vagus/ui-tokens": "workspace:*",
+    "@vagus/ui-input": "workspace:*",
+    "@vagus/ui-sidebar": "workspace:*",
+    "@vagus/ui-settings": "workspace:*",
+    "@vagus/ui-hooks": "workspace:*",
+    "@vagus/ui-panes": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1"
+  }
+}

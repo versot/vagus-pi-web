@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+*.tsbuildinfo
+.vite/
+
+# Test & coverage
+coverage/
+.pytest_cache/
+
+# Tooling cache
+.turbo/
+.oxlint_cache/
+
+# Local project state (user-scoped data)
+.vagus/
+
+# Internal docs & design artifacts — not part of the public repo
+/docs/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
+daemon.log
+daemon-error.log
+daemon-test.log
+
+# Trae
+.trae/
+
+# Playwright MCP artifacts
+.playwright-mcp/
+vagus-web.*.log

@@ -1,0 +1,32 @@
+{
+  "name": "@versot/vaguspi-mcp",
+  "version": "0.1.0",
+  "description": "Built-in MCP extension for @versot/vaguspi: lazy MCP client for pi sessions, ships inside the package so no separate pi-mcp-adapter install is needed",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-ai": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "0.84.2",
+    "@earendil-works/pi-ai": "0.84.2",
+    "typebox": "1.3.7"
+  }
+}

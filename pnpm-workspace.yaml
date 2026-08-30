@@ -1,0 +1,16 @@
+packages:
+  - apps/*
+  - packages/*
+  - packages/host/*
+
+# Hard-pin openai so implicit upgrades can never silently change behavior.
+overrides:
+  openai: 6.40.0
+
+# pnpm 11 blocks dependency build scripts by default (supply-chain guard).
+# Only these packages are trusted to run install scripts.
+allowBuilds:
+  esbuild: true
+  lefthook: true
+  '@google/genai': true
+  protobufjs: true

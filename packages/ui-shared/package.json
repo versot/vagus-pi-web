@@ -1,0 +1,22 @@
+{
+  "name": "@vagus/ui-shared",
+  "version": "0.0.0",
+  "description": "Shared pure logic between the TUI and GUI frontends: protocol client, design tokens, formatting helpers.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@vagus/protocol": "workspace:*"
+  }
+}

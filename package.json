@@ -1,0 +1,45 @@
+{
+  "name": "vaguspi-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "vagusPI — a web GUI for the pi coding agent. Uses pi's own ~/.pi/agent config, so models, settings, packages, and sessions are shared with the pi CLI. Installable via `pi install npm:@versot/vaguspi`.",
+  "keywords": ["pi-package", "pi-web", "gui", "web-ui"],
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "build": "tsc -b tsconfig.host.json && tsdown",
+    "build:host": "tsc -b tsconfig.host.json",
+    "build:client": "tsc -b tsconfig.client.json",
+    "build:web": "tsc -b tsconfig.host.json && pnpm --filter @vagus/pi-web-gui build && pnpm --filter @vagus/pi-web-cli build && node apps/cli/scripts/copy-gui.mjs",
+    "typecheck": "tsc -b tsconfig.client.json && tsc -b tsconfig.host.json && tsc -p scripts/tsconfig.json",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "knip": "knip --treat-config-hints-as-errors",
+    "duplication": "jscpd --config .jscpd.json",
+    "check:all": "tsx scripts/check-gates.ts && pnpm check:contract",
+    "pi-web": "node --import tsx apps/cli/src/bin.ts",
+    "dev": "tsx apps/cli/src/commands/web.ts",
+    "check:contract": "tsx scripts/check-extension-contract.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/ws": "^8.18.1",
+    "@vitest/coverage-v8": "^3.0.0",
+    "jscpd": "^5.0.5",
+    "knip": "^6.0.0",
+    "lefthook": "^2.1.9",
+    "oxlint": "^1.76.0",
+    "tsdown": "^0.22.2",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^3.0.0",
+    "ws": "^8.21.3"
+  }
+}

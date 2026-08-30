@@ -1,0 +1,25 @@
+{
+  "name": "@vagus/pi-web-cli",
+  "version": "0.1.0",
+  "description": "pi-web CLI entry: daemon, web, gui.",
+  "type": "module",
+  "bin": {
+    "pi-web": "./dist/bin.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "build:with-gui": "tsc -b && pnpm --filter @vagus/pi-web-gui build && node scripts/copy-gui.mjs"
+  },
+  "dependencies": {
+    "@vagus/host-config": "workspace:*",
+    "@vagus/host-events": "workspace:*",
+    "@vagus/host-engine": "workspace:*",
+    "@vagus/host-models": "workspace:*",
+    "@vagus/host-rpc": "workspace:*",
+    "@vagus/protocol": "workspace:*",
+    "@earendil-works/pi-coding-agent": "0.84.2"
+  }
+}

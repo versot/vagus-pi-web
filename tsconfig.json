@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "compilerOptions": {
+    "jsx": "react-jsx"
+  },
+  "references": [
+    { "path": "./packages/protocol" },
+    { "path": "./packages/ui-shared" },
+    { "path": "./packages/ui-tokens" },
+    { "path": "./packages/ui-chat" },
+    { "path": "./packages/ui-input" },
+    { "path": "./packages/ui-sidebar" },
+    { "path": "./packages/ui-settings" },
+    { "path": "./packages/ui-hooks" },
+    { "path": "./packages/ui-panes" },
+    { "path": "./packages/web" },
+    { "path": "./packages/host/events" },
+    { "path": "./packages/host/config" },
+    { "path": "./packages/host/models" },
+    { "path": "./packages/host/engine" },
+    { "path": "./packages/host/rpc" },
+    { "path": "./apps/cli" },
+    { "path": "./apps/gui" }
+  ]
+}

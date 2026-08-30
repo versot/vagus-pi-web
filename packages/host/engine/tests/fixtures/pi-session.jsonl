@@ -1,0 +1,6 @@
+{"type":"session","version":3,"id":"sess-1","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/repo"}
+{"type":"message","id":"m1","parentId":null,"timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"hello"}],"timestamp":1787000000000}}
+{"type":"message","id":"m2","parentId":"m1","timestamp":"2026-01-01T00:00:02.000Z","message":{"role":"assistant","content":[{"type":"thinking","thinking":"let me think"},{"type":"toolCall","id":"call_1","name":"bash","arguments":{"command":"echo hi"}},{"type":"text","text":"running now"}],"timestamp":1787000001000}}
+{"type":"message","id":"m3","parentId":"m2","timestamp":"2026-01-01T00:00:03.000Z","message":{"role":"toolResult","toolCallId":"call_1","toolName":"bash","content":[{"type":"text","text":"hi"}],"timestamp":1787000001500}}
+{"type":"message","id":"m4","parentId":"m3","timestamp":"2026-01-01T00:00:04.000Z","message":{"role":"assistant","content":[{"type":"thinking","thinking":"all good"},{"type":"text","text":"**hi** world"}],"timestamp":1787000002000}}
+{"type":"message","id":"m5","parentId":"m4","timestamp":"2026-01-01T00:00:05.000Z","message":{"role":"user","content":[{"type":"text","text":"next question"}],"timestamp":1787000003000}}

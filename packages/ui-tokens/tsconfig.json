@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
+    "lib": ["ES2023", "DOM"],
+    "types": [],
+    "jsx": "react-jsx"
+  },
+  "include": ["src"],
+  "references": [
+    {
+      "path": "../protocol"
+    },
+    {
+      "path": "../ui-shared"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@vagus/host-engine",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Vagus engine — wraps pi SDK for session orchestration",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@vagus/host-events": "workspace:*",
+    "@earendil-works/pi-coding-agent": "0.84.2",
+    "diff": "8.0.4",
+    "@vagus/protocol": "workspace:*"
+  },
+  "devDependencies": {}
+}
