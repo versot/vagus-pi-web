@@ -43,6 +43,16 @@ interface PluginsViewProps {
   onClose?: () => void;
 }
 
+/** Human-readable resource summary for a package row. */
+function resourceLabel(p: PiPackageInfo): string {
+  const parts: string[] = [];
+  if (p.resources.extensions > 0) parts.push(`${p.resources.extensions} 扩展`);
+  if (p.resources.skills > 0) parts.push(`${p.resources.skills} 技能`);
+  if (p.resources.prompts > 0) parts.push(`${p.resources.prompts} 模板`);
+  if (p.resources.themes > 0) parts.push(`${p.resources.themes} 主题`);
+  return parts.length > 0 ? parts.join(" · ") : "未声明资源";
+}
+
 export function PluginsView({ request, t, onClose }: PluginsViewProps): JSX.Element {
   const { theme } = useTheme();
   const isDark = theme !== "light";
@@ -138,15 +148,6 @@ export function PluginsView({ request, t, onClose }: PluginsViewProps): JSX.Elem
     },
     { extensions: 0, skills: 0, prompts: 0, themes: 0 },
   );
-
-  const resourceLabel = (p: PiPackageInfo): string => {
-    const parts: string[] = [];
-    if (p.resources.extensions > 0) parts.push(`${p.resources.extensions} 扩展`);
-    if (p.resources.skills > 0) parts.push(`${p.resources.skills} 技能`);
-    if (p.resources.prompts > 0) parts.push(`${p.resources.prompts} 模板`);
-    if (p.resources.themes > 0) parts.push(`${p.resources.themes} 主题`);
-    return parts.length > 0 ? parts.join(" · ") : "未声明资源";
-  };
 
   return (
     <div

@@ -19,6 +19,8 @@ import { useEffect, useRef, useState } from "react";
 /** The autoscroll handle — refs + actions consumed by the chat pane. */
 export type Autoscroll = ReturnType<typeof useAutoscroll>;
 
+const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
+
 export function useAutoscroll(itemsCount: number, activeId: string | undefined) {
   const scrollRef = useRef<HTMLElement | null>(null);
   const nearBottomRef = useRef(true);
@@ -125,7 +127,6 @@ export function useAutoscroll(itemsCount: number, activeId: string | undefined) 
       const el = scrollRef.current;
       if (!el) return;
       const start = el.scrollTop;
-      const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
       programmaticRef.current = true;
       const begin = performance.now();
       const step = (now: number): void => {
@@ -158,7 +159,6 @@ export function useAutoscroll(itemsCount: number, activeId: string | undefined) 
     if (!el || deltaY === 0) return;
     const start = el.scrollTop;
     const target = Math.max(0, start + deltaY);
-    const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
     programmaticRef.current = true;
     const begin = performance.now();
     const step = (now: number): void => {

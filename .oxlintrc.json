@@ -11,6 +11,8 @@
     "typescript/consistent-type-imports": "error",
     "typescript/no-unused-vars": ["error", { "args": "none" }],
     "no-console": "off",
+    // Node ESM shims (__dirname) are a standard Node idiom in scripts.
+    "eslint/no-underscore-dangle": ["error", { "allow": ["__dirname"] }],
     // path-basename idioms (.filter(Boolean).pop()) — find has different
     // semantics (last vs first); keep the warning-free convention.
     "unicorn/prefer-array-find": "off",

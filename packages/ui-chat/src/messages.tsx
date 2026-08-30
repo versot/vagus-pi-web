@@ -35,15 +35,6 @@ function SkillBlockParts({ parts }: { parts: TextPart[] }): JSX.Element {
 }
 
 /**
- * Reverse a skill expansion for copy/edit: turn `<skill name="x">…</skill>`
- * back into `/skill:x` so copying a user message gives the original command,
- * not the full injected prompt.
- */
-function restoreSkillCommands(text: string): string {
-  return text.replace(/<skill\s+name="([^"]+)"[^>]*>[\s\S]*?<\/skill>/g, (_m, name: string) => `/skill:${name}`);
-}
-
-/**
  * Unify a user message into { skillTag, args, copyText }:
  * - realtime form: item.skillTag set, text = original `/skill:x args`
  * - history form: text = expanded `<skill name="x">…</skill>\n\nargs`

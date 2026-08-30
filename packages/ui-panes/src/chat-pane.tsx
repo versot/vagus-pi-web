@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useTokens } from "@vagus/ui-tokens";
 import { ChatMessage, WorkBlock, groupChatItems, dedupeThinking, TurnDiffSummary } from "@vagus/ui-chat";
-import type { ChatItem } from "@vagus/ui-chat";
+import type { ChatItem, TurnFile } from "@vagus/ui-chat";
 import type { RefObject } from "react";
 import { HistoryNav } from "./history-nav.js";
 import { InputCard } from "./input-card.js";
@@ -35,7 +35,7 @@ export function ChatPane(props: {
   /** Active session id — HistoryNav scrolls its rail to the bottom on switch. */
   activeId?: string;
   /** Open the right-pane diff viewer on a file (optionally with its turn's files). */
-  onOpenFile: (file: string, turnFiles?: import("@vagus/ui-chat").TurnFile[]) => void;
+  onOpenFile: (file: string, turnFiles?: TurnFile[]) => void;
   /** Undo this turn's file changes (atomic batch); resolves with the outcome. */
   onRevertAll: (files: string[]) => void;
   /** Inline extension-UI cards for THIS session, in trigger order (pending + answered). */
@@ -246,7 +246,6 @@ export function ChatPane(props: {
             // numbered 1..N in order). Cards without a turn (legacy records)
             // fall back to the LAST tool block. This keeps each questionnaire
             // at its own turn instead of piling up on the newest one.
-            const toolBlocks = groups.filter((g) => g.kind === "work" && g.work.some((w) => w.kind === "tool"));
             const out: JSX.Element[] = [];
             let gi = 0;
             let userMsgIndex = 0;
@@ -293,7 +292,6 @@ export function ChatPane(props: {
                 const { work } = group;
                 const wk = work[0]?.id ?? gi;
                 const live = group === liveGroup;
-                const isToolBlock = group.kind === "work" && group.work.some((w) => w.kind === "tool");
                 // Cards anchored to THIS turn's block (from the memoized map).
                 const blockCards = cardsByTurn.byIdx.get(gi) ?? [];
                 const attached =

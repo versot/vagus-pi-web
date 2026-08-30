@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { DefaultPackageManager, SettingsManager } from "@earendil-works/pi-coding-agent";
 
@@ -43,8 +43,7 @@ export interface McpServerEntry {
 
 export type McpScope = "user" | "project";
 
-/** Directory under which pi manages installed packages (npm clones / git clones). */
-const MANAGED_DIRS = ["npm", "git"] as const;
+// Directory under which pi manages installed packages (npm clones / git clones).
 
 export class PiPackageManager {
   private readonly engineDir: string;

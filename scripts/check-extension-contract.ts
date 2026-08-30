@@ -31,7 +31,7 @@ const ROOT = resolve(__dirname, "..");
 /** pi.* methods that are SAFE to call at extension load time (registrations). */
 // Wait — registerTool IS allowed at load time per pi docs. Let me split:
 // ALLOWED at top-level (registrations + event subscriptions)
-const REGISTRATION_API: string[] = [
+const REGISTRATION_API = new Set([
   "on",
   "registerCommand",
   "registerShortcut",
@@ -40,10 +40,10 @@ const REGISTRATION_API: string[] = [
   "registerMessageRenderer",
   "registerMarkdownTransformer",
   "registerEntryRenderer",
-];
+]);
 
 // FORBIDDEN at top-level (action methods — only inside handlers)
-const ACTION_API: string[] = [
+const ACTION_API = new Set([
   "getActiveTools",
   "getAllTools",
   "setActiveTools",
@@ -59,7 +59,7 @@ const ACTION_API: string[] = [
   "setLabel",
   "exec",
   "unregisterProvider",
-];
+]);
 
 /** Check if a call expression is `pi.<method>(...)`. Returns the method name or null. */
 function getPiMethodName(node: ts.CallExpression): string | null {

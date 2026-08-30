@@ -1,0 +1,6 @@
+# Build output — compressed production bundles, not author code
+packages/pi-web/gui/
+packages/pi-web/extensions/
+packages/pi-web/dist/
+apps/gui/dist/
+apps/cli/dist/

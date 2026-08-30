@@ -60,9 +60,6 @@ function serverKey(server: McpServer): string {
   return server.config.cwd ? `${server.name}@${server.config.cwd}` : server.name;
 }
 
-/** Names known to provide MCP tool registration in a pi session. */
-const KNOWN_MCP_ADAPTER_HINTS = ["mcp-adapter", "pi-mcp", "mcp_server"];
-
 /** Read { mcpServers: {...} } from a JSON file (missing/corrupt → {}). */
 function readMcpFile(path: string): Record<string, unknown> {
   try {
@@ -81,18 +78,8 @@ function loadServers(agentDir: string, cwd: string): McpServer[] {
   const user = readMcpFile(join(agentDir, "mcp.json"));
   const project = readMcpFile(join(cwd, ".mcp.json"));
   // Normalize: accept BOTH the flat `{ name: config }` shape AND the
-  // Claude-style `{ "mcpServers": { name: config } }` wrapper. Other tools
-  // (Claude Desktop, Cursor, …) write the wrapped form, so be lenient.
-  const normalize = (raw: Record<string, unknown>): Record<string, unknown> => {
-    if (raw && typeof raw === "object" && "mcpServers" in raw) {
-      const wrapped = (raw as { mcpServers?: unknown }).mcpServers;
-      if (wrapped && typeof wrapped === "object" && !Array.isArray(wrapped)) {
-        return wrapped as Record<string, unknown>;
-      }
-    }
-    return raw;
-  };
-  const merged: Record<string, unknown> = { ...normalize(user), ...normalize(project) };
+  // Claude-style `{ "mcpServers": { name: config } }` wrapper.
+  const merged: Record<string, unknown> = { ...normalizeConfigShape(user), ...normalizeConfigShape(project) };
   return Object.entries(merged)
     .map(([name, cfg]) => ({
       name,
@@ -104,15 +91,14 @@ function loadServers(agentDir: string, cwd: string): McpServer[] {
 }
 
 /** Best-effort check for another extension that already provides MCP tools. */
-function hasExistingMcpAdapter(pi: ExtensionAPI): boolean {
-  try {
-    const active = pi.getActiveTools();
-    return active.some((tool) =>
-      KNOWN_MCP_ADAPTER_HINTS.some((hint) => tool.toLowerCase().includes(hint)),
-    );
-  } catch {
-    return false;
+function normalizeConfigShape(raw: Record<string, unknown>): Record<string, unknown> {
+  if (raw && typeof raw === "object" && "mcpServers" in raw) {
+    const wrapped = (raw as { mcpServers?: unknown }).mcpServers;
+    if (wrapped && typeof wrapped === "object" && !Array.isArray(wrapped)) {
+      return wrapped as Record<string, unknown>;
+    }
   }
+  return raw;
 }
 
 /** Convert an MCP JSON Schema to a TypeBox schema. Falls back to Type.Any(). */

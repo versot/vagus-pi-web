@@ -155,10 +155,10 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
   useEffect(() => {
     const hasWidgets = Object.keys(activeWidgets).length > 0;
     if (hasWidgets) {
-      setRightTabs((prev) => (prev.some((t) => t.id === "widget") ? prev : [...prev, WIDGET_TAB]));
+      setRightTabs((prev) => (prev.some((tab) => tab.id === "widget") ? prev : [...prev, WIDGET_TAB]));
       setRightTabId((prev) => prev ?? "widget");
     } else {
-      setRightTabs((prev) => (prev.some((t) => t.id === "widget") ? prev.filter((t) => t.id !== "widget") : prev));
+      setRightTabs((prev) => (prev.some((tab) => tab.id === "widget") ? prev.filter((tab) => tab.id !== "widget") : prev));
       setRightTabId((prev) => (prev === "widget" ? undefined : prev));
     }
   }, [activeWidgets]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -310,8 +310,8 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
       }
       // Multi-session: if the slot already has live-streamed content
       // (switching back to a running session), keep it — no reload.
-      const slot = state.slots[sid];
-      if (!slot || slot.items.length === 0) {
+      const loadedSlot = state.slots[sid];
+      if (!loadedSlot || loadedSlot.items.length === 0) {
         dispatch({ type: "loadHistory", sessionId: sid, id: nextId(), messages: result.messages, hasMore: result.hasMore, total: result.total, startIndex: result.startIndex });
       }
       autoscroll.resetSnap(); // session switch — snap to bottom, don't animate
@@ -747,10 +747,11 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
         if (arr && arr.length > 0) {
           const next: Record<string, UiCardItem[]> = {};
           for (const req of arr) {
-            const sid = (req.request as any).sessionId ?? "global";
+            const event = req.request as unknown as UiRequestEvent;
+            const sid = event.sessionId ?? "global";
             next[sid] = [
               ...(next[sid] ?? []),
-              { event: req.request as any, sessionId: (req.request as any).sessionId, status: "pending" },
+              { event, sessionId: event.sessionId, status: "pending" },
             ];
           }
           setUiCards(next);
@@ -768,8 +769,8 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
             const next = { ...prev };
             for (const [sid, records] of Object.entries(hist)) {
               const cards: UiCardItem[] = records.map((r) => ({
-                event: r.request as any,
-                sessionId: (r.request as any).sessionId,
+                event: r.request as unknown as UiRequestEvent,
+                sessionId: (r.request as unknown as UiRequestEvent).sessionId,
                 status: "answered",
                 result: r.result as UiCardItem["result"],
               }));
@@ -925,7 +926,7 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
       return [
         ...WEB_BUILTIN_COMMANDS,
         ...(res.extensions ?? []).map((e) => ({ type: "extension" as const, name: e.name, description: e.description ?? "" })),
-        ...(res.templates ?? []).map((t) => ({ type: "template" as const, name: t.name, description: t.description ?? "" })),
+        ...(res.templates ?? []).map((tmpl) => ({ type: "template" as const, name: tmpl.name, description: tmpl.description ?? "" })),
         ...(res.skills ?? []).map((s) => ({ type: "skill" as const, name: `skill:${s.name}`, description: s.description ?? "" })),
       ];
     } catch {

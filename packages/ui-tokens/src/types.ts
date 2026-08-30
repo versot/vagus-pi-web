@@ -1,12 +1,4 @@
-import type {
-  SessionHistoryItem,
-  SessionMessage,
-  SessionOpenResult,
-  SessionPageResult,
-  UsageStatModel,
-  UsageStats,
-  UsageDailyPoint,
-} from "@vagus/protocol";
+import type { SessionMessage, UsageStatModel, UsageStats, UsageDailyPoint } from "@vagus/protocol";
 
 /**
  * Shared types used across the GUI.

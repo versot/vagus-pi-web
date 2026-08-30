@@ -1,5 +1,4 @@
 import { DefaultResourceLoader, SettingsManager } from "@earendil-works/pi-coding-agent";
-import { join } from "node:path";
 
 /**
  * Global skill discovery via pi's OWN DefaultResourceLoader.
@@ -46,7 +45,7 @@ export async function listAllSkills(cwd: string, agentDir: string): Promise<Skil
       else if (src.baseDir && src.baseDir.includes(".agents")) source = "agents";
       out.push({ name: skill.name, description: skill.description, path: skill.filePath, source });
     }
-    return out.sort((a, b) => a.name.localeCompare(b.name));
+    return out.toSorted((a, b) => a.name.localeCompare(b.name));
   } catch {
     return [];
   }

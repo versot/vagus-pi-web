@@ -1,6 +1,6 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import type { ApiType, CompatConfig, ModelConfig, ProviderConfig } from "@vagus/protocol";
+import type { ApiType, CompatConfig, ProviderConfig } from "@vagus/protocol";
 
 /**
  * Vagus models.json configuration (M5 parity).

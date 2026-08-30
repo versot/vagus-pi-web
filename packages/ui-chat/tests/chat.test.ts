@@ -193,9 +193,11 @@ describe("chatReducer", () => {
   });
 });
 import { groupChatItems } from "@vagus/ui-chat";
+import type { ChatItem } from "@vagus/ui-chat";
 
-describe("groupChatItems turn summaries", () => {
-  const turn = (id: number, name: string, args: string, diff: string): Extract<import("@vagus/ui-chat").ChatItem, { kind: "tool" }> => ({
+type ToolItem = Extract<ChatItem, { kind: "tool" }>;
+function turn(id: number, name: string, args: string, diff: string): ToolItem {
+  return {
     id,
     kind: "tool",
     toolCallId: `t${id}`,
@@ -204,7 +206,10 @@ describe("groupChatItems turn summaries", () => {
     status: "succeeded",
     diff,
     collapsed: true,
-  });
+  };
+}
+
+describe("groupChatItems turn summaries", () => {
 
   it("emits a turnSummary per turn with aggregated files, not cumulative", () => {
     const items = [

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTokens } from "@vagus/ui-tokens";
 import type { TokensReadonly } from "@vagus/ui-tokens";
 
