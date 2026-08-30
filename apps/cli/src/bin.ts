@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { runDaemon } from "./commands/daemon.js";
