@@ -13,7 +13,6 @@ export default defineConfig({
   entry: [
     "packages/protocol/src/index.ts",
     "packages/host/events/src/index.ts",
-    "packages/host/session/src/index.ts",
     "packages/host/config/src/index.ts",
     "packages/host/models/src/index.ts",
     "packages/host/engine/src/index.ts",
