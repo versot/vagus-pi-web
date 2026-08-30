@@ -1,6 +1,6 @@
 {
   "name": "@versot/vaguspi",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "pi-web — a web frontend for the pi coding agent. Launch the full chat UI in your browser with one command.",
   "keywords": [
     "pi",
