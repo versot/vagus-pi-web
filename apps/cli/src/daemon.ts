@@ -27,7 +27,13 @@ export interface SpawnDaemonOptions {
 
 /** Spawns the daemon child process. */
 export function spawnDaemon(options: SpawnDaemonOptions = {}): ChildProcess {
-  return spawn(process.execPath, ["--import", "tsx", daemonEntryPath(), "daemon"], {
+  const entry = daemonEntryPath();
+  // Dev (repo): the entry is a .ts source — run it through tsx. Prod (npx
+  // bundle): the entry is the esbuild bundle — plain node, no tsx dependency.
+  const args = entry.endsWith(".ts")
+    ? ["--import", "tsx", entry, "daemon"]
+    : [entry, "daemon"];
+  return spawn(process.execPath, args, {
     stdio: options.stdio ?? ["pipe", "pipe", "pipe"],
     env: { ...process.env, ...options.env },
   });
