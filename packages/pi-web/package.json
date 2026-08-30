@@ -1,8 +1,15 @@
 {
   "name": "@versot/vaguspi",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "pi-web — a web frontend for the pi coding agent. Launch the full chat UI in your browser with one command.",
-  "keywords": ["pi", "pi-web", "pi-package", "gui", "web-ui", "mcp"],
+  "keywords": [
+    "pi",
+    "pi-web",
+    "pi-package",
+    "gui",
+    "web-ui",
+    "mcp"
+  ],
   "type": "module",
   "license": "MIT",
   "bin": {
