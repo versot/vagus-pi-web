@@ -75,14 +75,14 @@ function isEventRegistrationCall(statement: ts.Statement): boolean {
   if (!ts.isExpressionStatement(statement)) return false;
   if (!ts.isCallExpression(statement.expression)) return false;
   const method = getPiMethodName(statement.expression);
-  return method !== null && REGISTRATION_API.includes(method);
+  return method !== null && REGISTRATION_API.has(method);
 }
 
 /** Check if a statement calls a pi.* action method (forbidden at top-level). */
 function callsActionMethod(expression: ts.Expression): string | null {
   if (ts.isCallExpression(expression)) {
     const method = getPiMethodName(expression);
-    if (method !== null && ACTION_API.includes(method)) return method;
+    if (method !== null && ACTION_API.has(method)) return method;
     // Recurse for nested calls (e.g., pi.registerTool inside a conditional)
     return null;
   }
@@ -172,9 +172,9 @@ async function main(): Promise<void> {
               if (ts.isCallExpression(expr)) {
                 const piMethod = getPiMethodName(expr);
                 if (piMethod !== null) {
-                  if (ACTION_API.includes(piMethod)) {
+                  if (ACTION_API.has(piMethod)) {
                     fail(file, lineOf(stmt.getStart(sf)), `pi.${piMethod}() is an ACTION method — forbidden at load time. Move it inside session_start or another event handler.`);
-                  } else if (!REGISTRATION_API.includes(piMethod)) {
+                  } else if (!REGISTRATION_API.has(piMethod)) {
                     fail(file, lineOf(stmt.getStart(sf)), `pi.${piMethod}() is unrecognised. If it's a registration, add it to REGISTRATION_API; if it's an action, add it to ACTION_API.`);
                   }
                 } else {
