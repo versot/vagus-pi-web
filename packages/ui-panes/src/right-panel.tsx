@@ -175,10 +175,8 @@ export function RightPanel(props: {
               {active ? (
                 render(active)
               ) : (
-                /* 无标签（会话无编辑）：空状态提示 */
-                <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, color: t.color.muted, fontSize: "0.85em", textAlign: "center", lineHeight: 1.6, fontFamily: "system-ui, -apple-system, sans-serif" }}>
-                  此会话暂无文件改动<br />让 agent 编辑文件后可在此审阅 diff
-                </div>
+                /* 无标签（会话无编辑）：空面板，无文案 */
+                <div style={{ height: "100%" }} />
               )}
             </div>
           </div>

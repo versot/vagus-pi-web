@@ -87,6 +87,8 @@ export const usageDailyPointSchema = z.object({
   /** Day start in ms. */
   ts: z.number(),
   tokens: z.number(),
+  /** USD cost for that day (0 when the provider doesn't report cost). */
+  cost: z.number(),
   messages: z.number(),
   sessions: z.number(),
   byModel: z.record(z.string(), z.number()),

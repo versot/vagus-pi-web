@@ -101,12 +101,13 @@ export function InputBar({ value, onChange, onSubmit, usage, providers, onSwitch
     return () => window.clearTimeout(id);
   }, [queuedMessages.length]);
 
-  // Auto-grow the textarea to fit its content (reset → snap to scrollHeight).
+  // Auto-grow the textarea to fit its content, capped at a max height so it
+  // scrolls (scrollbar hidden) instead of stretching infinitely.
   useEffect(() => {
     const ta = taRef.current;
     if (!ta) return;
     ta.style.height = "auto";
-    ta.style.height = `${ta.scrollHeight}px`;
+    ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
   }, [value]);
   const [modelOpen, setModelOpen] = useState(false);
   const [hoverUsage, setHoverUsage] = useState(false);
@@ -324,6 +325,10 @@ export function InputBar({ value, onChange, onSubmit, usage, providers, onSwitch
             return;
           }
           if (e.key === "Enter" && !e.shiftKey) {
+            // IME composition in progress (e.g. pinyin): Enter commits the
+            // composition, it does NOT send. Only send when the text has been
+            // committed to the field.
+            if ((e.nativeEvent as KeyboardEvent).isComposing) return;
             if (commandMode && commandMatches.length > 0) {
               e.preventDefault();
               const match = commandMatches[commandIndex];
@@ -369,10 +374,13 @@ export function InputBar({ value, onChange, onSubmit, usage, providers, onSwitch
         }}
         rows={1}
         style={{
-          width: "100%", minHeight: 34, overflow: "hidden", background: "transparent", border: "none", outline: "none", resize: "none",
+          width: "100%", minHeight: 34, maxHeight: 200, overflow: "auto", overflowX: "hidden",
+          background: "transparent", border: "none", outline: "none", resize: "none",
           fontFamily: t.font.sans, fontSize: "1.04em", lineHeight: 1.5, color: t.color.fg, padding: "2px 0 6px",
+          scrollbarWidth: "none", msOverflowStyle: "none",
         }}
       />
+      <style>{"textarea::-webkit-scrollbar{display:none}"}</style>
 
       {/* bottom row */}
       <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6 }}>

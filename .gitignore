@@ -45,3 +45,4 @@ daemon-test.log
 # Playwright MCP artifacts
 .playwright-mcp/
 vagus-web.*.log
+tmp/
