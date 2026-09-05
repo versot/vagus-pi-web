@@ -27,6 +27,14 @@ export function ChatPane(props: {
   onToggleCard: (id: number) => void;
   copyMessage: (text: string) => void;
   editSubmit: (text: string) => void;
+  /** Fork the session from this user message (派生). */
+  onFork?: (messageId: number, matchText: string, displayText: string) => void;
+  /** Extension status texts to show ABOVE the input bar (ctx.ui.setStatus). */
+  aboveEditorStatuses?: Record<string, string>;
+  /** Extension widgets to show ABOVE the input bar (placement="aboveEditor"),
+   *  keyed by widget key → lines. Rendered in a fixed-height zone so they stay
+   *  put while the input auto-grows to its max height. */
+  aboveEditorWidgets?: Record<string, { lines: string[] }>;
   inputCard: Omit<InputCardProps, "variant">;
   /** 当前对话名称（中间栏顶栏显示）。 */
   sessionName?: string;
@@ -46,6 +54,8 @@ export function ChatPane(props: {
   onLoadMore?: () => void;
   /** True while an earlier history page is being fetched. */
   loadingMore?: boolean;
+  /** Sidebar is collapsed — widen the chat's max width to use the space. */
+  wide?: boolean;
 }): JSX.Element {
   const t = useTokens();
   const { items, busy, turnStartTs, autoscroll } = props;
@@ -202,7 +212,7 @@ export function ChatPane(props: {
         ) : null}
       </header>
       <main ref={scrollRef} style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "28px 0" }}>
-        <div style={{ maxWidth: 1050, margin: "0 auto", padding: "0 28px", display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ maxWidth: props.wide ? 1280 : 1050, margin: "0 auto", padding: "0 28px", display: "flex", flexDirection: "column", gap: 6 }}>
           {/* Lazy-load indicator — shown at the top while an earlier page is fetched. */}
           {props.loadingMore && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", padding: "10px 0", color: t.color.muted, fontSize: "0.82em" }}>
@@ -253,6 +263,27 @@ export function ChatPane(props: {
             // long sessions with many DOM nodes stay fast. "auto" intrinsic
             // size remembers the rendered height after first paint.
             const cvStyle: CSSProperties = { contentVisibility: "auto", containIntrinsicSize: "auto 120px" };
+            // The final answer of each turn = the last assistant plain-item
+            // before the next user message (or end of list). Only those get a
+            // copy button, and only once the agent has finished (not busy).
+            const lastFinalReplyIds = new Set<number>();
+            {
+              let lastAssistantId: number | undefined;
+              for (const grp of groups) {
+                if (grp.kind === "item") {
+                  if (grp.item.kind === "assistant") lastAssistantId = grp.item.id;
+                  else if (grp.item.kind === "user" && lastAssistantId !== undefined) {
+                    lastFinalReplyIds.add(lastAssistantId);
+                    lastAssistantId = undefined;
+                  }
+                } else if (grp.kind === "work" || grp.kind === "turnSummary") {
+                  // A new work block closes the previous turn's final reply.
+                  if (lastAssistantId !== undefined) lastFinalReplyIds.add(lastAssistantId);
+                  lastAssistantId = undefined;
+                }
+              }
+              if (lastAssistantId !== undefined) lastFinalReplyIds.add(lastAssistantId);
+            }
             for (const group of groups) {
               if (group.kind === "item") {
                 const item = group.item;
@@ -260,13 +291,20 @@ export function ChatPane(props: {
                   // Wrap user messages so the history nav can locate them.
                   out.push(
                     <div key={`g${gi}`} data-msg-index={userMsgIndex++} style={{ maxWidth: "100%", ...cvStyle }}>
-                      <ChatMessage item={item} onToggleCard={props.onToggleCard} onCopy={props.copyMessage} onEditSubmit={props.editSubmit} />
+                      <ChatMessage item={item} onToggleCard={props.onToggleCard} onCopy={props.copyMessage} onEditSubmit={props.editSubmit} onFork={props.onFork} />
                     </div>,
                   );
                 } else {
                   out.push(
                     <div key={`g${gi}`} style={cvStyle}>
-                      <ChatMessage item={item} onToggleCard={props.onToggleCard} onCopy={props.copyMessage} onEditSubmit={props.editSubmit} />
+                      <ChatMessage
+                        item={item}
+                        onToggleCard={props.onToggleCard}
+                        onCopy={props.copyMessage}
+                        onEditSubmit={props.editSubmit}
+                        onFork={props.onFork}
+                        showCopy={item.kind === "assistant" && lastFinalReplyIds.has(item.id) && !busy}
+                      />
                     </div>,
                   );
                 }
@@ -395,7 +433,34 @@ export function ChatPane(props: {
         </button>
       )}
       <div style={{ padding: "10px 28px 10px", background: t.color.bg, flexShrink: 0 }}>
-        <div style={{ maxWidth: 960, margin: "0 auto" }}>
+        <div style={{ maxWidth: props.wide ? 1180 : 960, margin: "0 auto" }}>
+          {(() => {
+            const statusEntries = Object.entries(props.aboveEditorStatuses ?? {}).filter(([, text]) => text.length > 0);
+            const widgetEntries = Object.entries(props.aboveEditorWidgets ?? {}).filter(([, w]) => w.lines.length > 0);
+            if (statusEntries.length === 0 && widgetEntries.length === 0) return null;
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
+                {statusEntries.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+                    {statusEntries.map(([key, text]) => (
+                      <span key={key} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 999, background: t.color.surface, border: `1px solid ${t.color.border}`, fontSize: "0.8em", color: t.color.fg }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: t.color.primary }} />
+                        <span style={{ color: t.color.muted, fontWeight: 600 }}>{key}</span>
+                        <span>{text}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {widgetEntries.map(([key, w]) => (
+                  <div key={key} style={{ display: "flex", flexWrap: "wrap", gap: "4px 10px", fontSize: "0.8em", color: t.color.muted, alignItems: "center" }}>
+                    {w.lines.map((line, i) => (
+                      <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>{line}</span>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
           <InputCard {...props.inputCard} variant="chat" />
         </div>
       </div>

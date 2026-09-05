@@ -53,6 +53,9 @@ const copyMessage = (text: string): void => {
   void navigator.clipboard.writeText(text).catch(() => {});
 };
 
+/** Normalise text for fuzzy matching: trim + collapse whitespace. */
+const normText = (s: string): string => s.trim().replace(/\s+/g, " ");
+
 /**
  * Web-native builtin slash commands — routed to engine RPCs in sendMessage.
  * pi's own builtin slash commands (model/fork/tree/login/...) are TUI-only
@@ -146,6 +149,18 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
   const activeWidgets = useMemo(() => {
     const out: Record<string, { lines: string[] }> = {};
     for (const [key, w] of Object.entries(uiWidgets)) {
+      if (w.lines.length > 0 && (!w.sessionId || w.sessionId === state.activeId)) {
+        out[key] = { lines: w.lines };
+      }
+    }
+    return out;
+  }, [uiWidgets, state.activeId]);
+  // Extension widgets that render ABOVE the input bar (placement="aboveEditor")
+  // for the active session only.
+  const aboveEditorWidgets = useMemo(() => {
+    const out: Record<string, { lines: string[] }> = {};
+    for (const [key, w] of Object.entries(uiWidgets)) {
+      if (w.placement !== "aboveEditor") continue;
       if (w.lines.length > 0 && (!w.sessionId || w.sessionId === state.activeId)) {
         out[key] = { lines: w.lines };
       }
@@ -493,6 +508,80 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
     sendMessage(text, []);
   };
 
+  /** 派生：从这条用户消息创建一条全新会话（含到此为止的上下文，原会话不动）。 */
+  // Stable ref so the (memoized) fork button always invokes the LATEST runFork
+  // closure — the confirm dialog is set up once on mount, when `client` is
+  // still null, so a plain closure would capture the first render's null.
+  const runForkRef = useRef<(matchText: string, displayText: string) => void>(() => {});
+
+  const forkFrom = useCallback((messageId: number, matchText: string, displayText: string): void => {
+    // 先弹确认框，防止误点
+    confirm("派生新会话", "从这条消息开始创建一条新的会话，原会话保持不变。\n新会话只包含到此为止的上下文。", "确认派生", () => {
+      void runForkRef.current(matchText, displayText);
+    });
+  }, [confirm]);
+
+  const runFork = useCallback(async (matchText: string, displayText: string): Promise<void> => {
+    const c = client;
+    const sid = state.activeId;
+    if (!c || !sid) return;
+    // 即时反馈：确认后立刻提示，避免“点了没反应”的错觉
+    setUiToast({ text: "正在派生新会话…", type: "info" });
+    if (uiToastTimer.current) clearTimeout(uiToastTimer.current);
+    try {
+      // Find this message's session entry by matching fork points (text-based;
+      // frontend message ids are synthetic and don't map to session entry ids).
+      const points = (await c.request("session.forkPoints", { sessionId: sid })) as Array<{ entryId: string; text: string }> | undefined;
+      // Normalise both texts so minor whitespace differences don't break
+      // matching: trim + collapse consecutive whitespace into single space.
+      const target = (points ?? []).findLast((p) => normText(p.text) === normText(matchText));
+      if (!target) {
+        // 失败时显示前 3 个 fork 点文本和用户文本的差异，帮助诊断
+        const samples = (points ?? []).slice(0, 3).map((p) => JSON.stringify(p.text.slice(0, 60))).join(", ");
+        setUiToast({ text: `未找到匹配的派生点 (${(points ?? []).length} 个点，样本: ${samples})`, type: "error" });
+        console.log("[fork] match failed. user text:", JSON.stringify(matchText), "| normText:", normText(matchText));
+        console.log("[fork] first 3 fork points:", (points ?? []).slice(0, 3).map((p) => ({ id: p.entryId, text: p.text.slice(0, 80) })));
+        return;
+      }
+      // Create a brand-new session forked at this message (backend writes a
+      // new JSONL with context up to this entry; original session untouched).
+      const created = (await c.request("session.fork", { sessionId: sid, entryId: target.entryId })) as { sessionId: string; cwd: string; sessionFile: string } | undefined;
+      if (!created?.sessionId) {
+        setUiToast({ text: "派生失败：daemon 未返回新会话", type: "error" });
+        return;
+      }
+      // 派生后自动命名：原名称 (n)，n 为当前同源会话数 + 1
+      const sourceSession = sessions.find((s) => s.id === sid || s.path === activePath);
+      const baseName = sourceSession?.name || sourceSession?.firstMessage || "新会话";
+      const nameCount = sessions.filter((s) => (s.name || s.firstMessage || "").startsWith(baseName)).length;
+      const newName = `${baseName} (${nameCount + 1})`;
+      try {
+        await c.request("session.renameFile", { sessionFile: created.sessionFile, name: newName });
+      } catch { /* non-fatal */ }
+      // Refresh the sidebar so the new session appears, then open it.
+      void refreshHistory(c);
+      const result = (await c.request("session.open", { sessionFile: created.sessionFile, limit: 200 })) as SessionOpenResult;
+      dispatch({ type: "loadHistory", sessionId: created.sessionId, id: nextId(), messages: result.messages, hasMore: result.hasMore, total: result.total, startIndex: result.startIndex });
+      dispatch({ type: "activate", sessionId: created.sessionId });
+      setActivePath(created.sessionFile);
+      void refreshHistory(c);
+      autoscroll.resetSnap();
+      // Pre-fill the input with the user-friendly form of the forked message
+      // (e.g. "/skill:xxx" for skill messages, not the expanded skill body).
+      inputState.setInput(displayText);
+      setUiToast({ text: "✅ 新会话已派生，可编辑消息后发送", type: "info" });
+      if (uiToastTimer.current) clearTimeout(uiToastTimer.current);
+      uiToastTimer.current = setTimeout(() => setUiToast(null), 2500);
+    } catch (err) {
+      console.log("[fork] failed:", String(err));
+      setUiToast({ text: `派生失败：${err instanceof Error ? err.message : String(err)}`, type: "error" });
+      if (uiToastTimer.current) clearTimeout(uiToastTimer.current);
+      uiToastTimer.current = setTimeout(() => setUiToast(null), 4000);
+    }
+  }, [client, state.activeId, dispatch, refreshHistory, setActivePath, autoscroll, sessions, activePath, setUiToast, uiToastTimer, inputState]);
+  // Keep the stable ref pointing at the latest closure (see runForkRef above).
+  runForkRef.current = runFork;
+
   /** Undo a whole turn's file changes (atomic batch — blocked if any file was hand-edited). */
   const revertAll = useCallback(async (files: string[]): Promise<void> => {
     if (!client || !state.activeId || files.length === 0) return;
@@ -552,6 +641,9 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
     if (!client) return;
     try {
       await client.request("session.archive", { sessionFile: path });
+      // Optimistic: drop it from the active list now; refreshHistory (which
+      // re-parses every session JSONL) runs in the background.
+      setSessions((prev) => prev.filter((s) => s.path !== path));
       if (activePath === path) {
         dispatch({ type: "activate", sessionId: undefined });
         setActivePath(undefined);
@@ -567,6 +659,7 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
     if (!client) return;
     try {
       await client.request("session.restore", { sessionFile: path });
+      archiving.removeArchivedSession(path);
       void refreshHistory(client);
       void archiving.syncArchived(client);
     } catch {
@@ -990,10 +1083,14 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
     queuedMessages: active.queued,
   };
 
+  // Sidebar collapsed → chat/welcome content widens to reclaim the space.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const sidebarProps = {
     sessions,
     activePath,
     onNewSession: newSession,
+    onCollapsedChange: setSidebarCollapsed,
+    onClearAllArchived: () => archiving.clearAllArchived(),
     onOpenSession,
     onOpenSettings: () => setSettingsOpen(true),
     onOpenPlugins: () => setPluginsOpen(true),
@@ -1005,9 +1102,16 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
     onTogglePin: togglePin,
     pinnedSessions,
     archivedProjects,
-    onArchiveProject: archiving.archiveProject,
-    onUnarchiveProject: archiving.unarchiveProject,
-    onDeleteProject: (cwd: string) => archiving.deleteProject(cwd, sessions, activePath),
+    onArchiveProject: async (cwd: string) => {
+      // Optimistic: drop the project's sessions from the active list now.
+      setSessions((prev) => prev.filter((s) => s.cwd !== cwd));
+      await archiving.archiveProject(cwd);
+    },
+    onUnarchiveProject: async (dirKey: string) => {
+      archiving.removeArchivedProject(dirKey);
+      await archiving.unarchiveProject(dirKey);
+    },
+    onDeleteProject: (dirKey: string) => archiving.deleteProject(dirKey, sessions, activePath),
     busyPaths,
     pendingDialogPaths: new Set(
       Object.entries(uiCards)
@@ -1038,14 +1142,14 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
         /* 欢迎页：侧栏 + 品牌问候区 + 项目选择器 + 输入卡 */
         <div style={{ flex: 1, display: "flex", flexDirection: "row", minWidth: 0 }}>
           <SessionSidebar {...sidebarProps} />
-          <WelcomePane activeProject={activeProject} projects={projects} onSelectProject={selectProject} onNewProject={() => setPickerOpen(true)} inputCard={inputCard} />
+          <WelcomePane wide={sidebarCollapsed} activeProject={activeProject} projects={projects} onSelectProject={selectProject} onNewProject={() => setPickerOpen(true)} inputCard={inputCard} aboveEditorWidgets={aboveEditorWidgets} aboveEditorStatuses={uiStatuses} />
         </div>
       ) : (
         /* 对话页：侧栏 + 聊天流 + 右视图（可插拔） */
         <div style={{ flex: 1, display: "flex", flexDirection: "row", minWidth: 0 }}>
           <SessionSidebar {...sidebarProps} />
           <ChatPane
-            items={active.items}
+            wide={sidebarCollapsed}            items={active.items}
             busy={active.busy}
             turnStartTs={active.turnStart}
             sessionLoading={sessionLoading}
@@ -1057,11 +1161,14 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
             onToggleCard={(id: number) => dispatch({ type: "toggleCollapse", id })}
             copyMessage={copyMessage}
             editSubmit={editSubmit}
+            onFork={forkFrom}
             inputCard={inputCard}
             uiCards={activeCards}
             onUiCardRespond={onUiCardRespond}
             onLoadMore={loadMoreHistory}
             loadingMore={loadingMoreHistory}
+            aboveEditorWidgets={aboveEditorWidgets}
+            aboveEditorStatuses={uiStatuses}
             onOpenFile={openFileDiff}
             onRevertAll={(files: string[]) => void revertAll(files)}
           />
@@ -1102,40 +1209,16 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
 
       {confirmState && <ConfirmDialog state={confirmState} onClose={() => setConfirmState(null)} />}
 
-      {(() => {
-        const statusEntries = Object.entries(uiStatuses);
-        const hasStatus = statusEntries.length > 0;
-        // Anchor just above the input-card component (the chat bar at the
-        // bottom), so the status strip / toast never cover the input area.
-        let inputTop = window.innerHeight;
-        try {
-          const el = document.querySelector<HTMLElement>(".vagus-input-card");
-          if (el) inputTop = el.getBoundingClientRect().top;
-        } catch { /* layout query unavailable */ }
-        const statusBottom = Math.max(12, window.innerHeight - inputTop + 12);
-        const toastBottom = statusBottom + (Object.keys(uiStatuses).length > 0 ? 40 : 0) + 12;
-        return (
-          <>
-            {hasStatus && (
-              <div style={{ position: "fixed", bottom: statusBottom, left: "50%", transform: "translateX(-50%)", zIndex: 10000, display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-                {statusEntries.map(([key, text]) => (
-                  <span key={key} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 999, background: t.color.surface, border: `1px solid ${t.color.border}`, boxShadow: "0 6px 20px rgba(0,0,0,0.18)", fontSize: "0.82em", color: t.color.fg }}>
-                    <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: t.color.primary }} />
-                    <span style={{ color: t.color.muted, fontWeight: 600 }}>{key}</span>
-                    <span>{text}</span>
-                  </span>
-                ))}
-              </div>
-            )}
-            {uiToast && (
-              <div style={{ position: "fixed", bottom: toastBottom, left: "50%", transform: "translateX(-50%)", zIndex: 10001, display: "flex", alignItems: "flex-start", gap: 9, padding: "10px 16px", borderRadius: 12, background: t.color.surface, border: `1px solid ${t.color.border}`, boxShadow: "0 12px 40px rgba(0,0,0,0.25)", fontSize: "0.88em", color: t.color.fg, animation: "vagus-toast-in 0.2s ease", maxWidth: "min(90vw, 560px)" }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, marginTop: 5, background: uiToast.type === "error" ? "#E5484D" : uiToast.type === "warning" ? "#B7791F" : t.color.primary }} />
-                <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{uiToast.text}</span>
-              </div>
-            )}
-          </>
-        );
-      })()}
+      {/* Toast notifications — anchored above the input area (position: fixed).
+          Extension status texts are rendered by ChatPane/WelcomePane above the
+          input via the aboveEditorStatuses prop, so only the transient toast
+          lives here. */}
+      {uiToast && (
+        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 10001, display: "flex", alignItems: "flex-start", gap: 9, padding: "10px 16px", borderRadius: 12, background: t.color.surface, border: `1px solid ${t.color.border}`, boxShadow: "0 12px 40px rgba(0,0,0,0.25)", fontSize: "0.88em", color: t.color.fg, animation: "vagus-toast-in 0.2s ease", maxWidth: "min(90vw, 560px)" }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, marginTop: 5, background: uiToast.type === "error" ? "#E5484D" : uiToast.type === "warning" ? "#B7791F" : t.color.primary }} />
+          <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{uiToast.text}</span>
+        </div>
+      )}
 
       {revertReport && <RevertReportModal report={revertReport} onClose={() => setRevertReport(null)} />}
     </div>

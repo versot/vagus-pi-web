@@ -71,6 +71,9 @@ importers:
       '@vagus/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
+      undici:
+        specifier: 8.9.0
+        version: 8.9.0
 
   apps/gui:
     dependencies:

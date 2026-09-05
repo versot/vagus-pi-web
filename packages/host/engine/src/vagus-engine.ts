@@ -7,8 +7,9 @@ import type {
   ExtensionUIContext,
 } from "@earendil-works/pi-coding-agent";
 import { homedir } from "node:os";
-import { basename, dirname, isAbsolute, join, resolve } from "node:path";
-import { appendFileSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
+import { randomUUID } from "node:crypto";
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import type { EventBus } from "@vagus/host-events";
 import type { CoreEventMap } from "@vagus/host-events";
 import type { SessionHistoryItem, SessionMessage, UsageStats } from "@vagus/protocol";
@@ -1083,9 +1084,16 @@ export class VagusEngine {
   private closeSessionForCwd(cwd: string): void {
     for (const [sid, session] of this.sessions) {
       if (session.sessionManager?.getCwd() === cwd) {
-        session.dispose();
+        // Dispose must never block (or kill) the archive/delete flow — any
+        // error here is non-fatal, the session is going away regardless.
+        process.stderr.write(`vagus: disposing session ${sid} (cwd=${cwd})\n`);
+        try {
+          session.dispose();
+        } catch (err) {
+          process.stderr.write(`vagus: dispose threw: ${err instanceof Error ? err.stack : String(err)}\n`);
+        }
         this.sessions.delete(sid);
-        void this.options.bus.emit("session.closed", { type: "session.closed", sessionId: sid });
+        void this.options.bus.emit("session.closed", { type: "session.closed", sessionId: sid }).catch(() => {});
       }
     }
   }
@@ -1151,6 +1159,32 @@ export class VagusEngine {
   }
 
   /** Restores an archived project: moves its session files back under `sessions/`. */
+  /** Restores an archived project by its encoded dir name (unique identity). */
+  async unarchiveProjectByDir(dirKey: string): Promise<void> {
+    if (!dirKey || dirKey.includes("/") || dirKey.includes("\\") || dirKey.includes("..")) return;
+    const agentDir = this.agentDirPath();
+    const src = join(agentDir, "archived", dirKey);
+    if (!existsSync(src)) return;
+    // Re-derive the session cwd from a header to know where sessions go.
+    let cwd: string | undefined;
+    try {
+      cwd = this.sessionCwd(readdirSync(src).filter((f) => f.endsWith(".jsonl"))[0] ? join(src, readdirSync(src).filter((f) => f.endsWith(".jsonl"))[0]!) : "");
+    } catch { cwd = undefined; }
+    if (cwd) {
+      this.closeSessionForCwd(cwd);
+      const dst = join(agentDir, "sessions", this.encodeCwd(cwd));
+      mkdirSync(dst, { recursive: true });
+      for (const entry of readdirSync(src)) {
+        if (!entry.endsWith(".jsonl")) continue;
+        const from = join(src, entry);
+        try {
+          if (statSync(from).isFile()) renameSync(from, join(dst, entry));
+        } catch { /* skip locked */ }
+      }
+      this.rmDirSafe(src);
+    }
+  }
+
   async restoreProject(cwd: string): Promise<void> {
     const agentDir = this.agentDirPath();
     const src = join(agentDir, "archived", this.encodeCwd(cwd));
@@ -1169,23 +1203,102 @@ export class VagusEngine {
         // skip unreadable/locked files
       }
     }
-    rmSync(src, { recursive: true, force: true });
+    this.rmDirSafe(src);
+  }
+
+  /** Permanently deletes an archived project dir by its encoded dir name.
+   *  dirKey (not cwd) is the identity — cwds can repeat across archive dirs. */
+  async deleteArchivedProjectByDir(dirKey: string): Promise<void> {
+    // Sanitize: dirKey must be a plain directory name (no traversal).
+    if (!dirKey || dirKey.includes("/") || dirKey.includes("\\") || dirKey.includes("..")) return;
+    const agentDir = this.agentDirPath();
+    const dir = join(agentDir, "archived", dirKey);
+    process.stderr.write(`vagus: deleteArchivedProjectByDir dirKey=${dirKey}\n`);
+    // Close any open session whose file lives inside this archived dir.
+    const prefix = dir + sep;
+    for (const [sid, session] of this.sessions) {
+      const file = session.sessionManager?.getSessionFile();
+      if (file && (file === dir || file.startsWith(prefix))) {
+        try {
+          session.dispose();
+        } catch { /* non-fatal */ }
+        this.sessions.delete(sid);
+        void this.options.bus.emit("session.closed", { type: "session.closed", sessionId: sid }).catch(() => {});
+      }
+    }
+    process.stderr.write(`vagus: sessions closed, removing dir...\n`);
+    this.rmDirSafe(dir);
+    process.stderr.write(`vagus: archived dir removed OK\n`);
   }
 
   /** Permanently deletes an archived project's session dir (JSONL). */
   async deleteArchivedProject(cwd: string): Promise<void> {
     const agentDir = this.agentDirPath();
     const dir = join(agentDir, "archived", this.encodeCwd(cwd));
+    process.stderr.write(`vagus: deleteArchivedProject cwd=${cwd} dir=${dir}\n`);
     this.closeSessionForCwd(cwd);
-    rmSync(dir, { recursive: true, force: true });
+    process.stderr.write(`vagus: sessions closed, removing dir...\n`);
+    this.rmDirSafe(dir);
+    process.stderr.write(`vagus: archived dir removed OK\n`);
+  }
+
+  /**
+   * rmSync(recursive) has crashed the daemon natively (0xC0000409 fastfail)
+   * on Windows when deleting archived dirs with non-ASCII names — JS guards
+   * cannot catch a native abort. Delete file-by-file instead: plain unlink
+   * calls are individually catchable and skip whatever is locked/unreadable.
+   *
+   * Iterative (explicit stack, deepest-first) — no JS recursion limit, so
+   * arbitrarily deep trees are safe.
+   */
+  private rmDirSafe(root: string): void {
+    // [dir, expanded] — expanded=false means "not read yet"; children are
+    // pushed above their parent, so a dir is rmdir'ed only after everything
+    // inside is gone. Second pass (expanded=true) just removes the empty dir.
+    const pendingDirs: Array<{ path: string; expanded: boolean }> = [{ path: root, expanded: false }];
+    while (pendingDirs.length > 0) {
+      const top = pendingDirs[pendingDirs.length - 1]!;
+      if (top.expanded) {
+        pendingDirs.pop();
+        try {
+          rmdirSync(top.path);
+        } catch (err) {
+          process.stderr.write(`vagus: rmDirSafe rmdir failed ${top.path}: ${err instanceof Error ? err.message : String(err)}\n`);
+        }
+        continue;
+      }
+      let entries: string[];
+      try {
+        entries = readdirSync(top.path);
+      } catch {
+        pendingDirs.pop(); // unreadable/gone — just drop it
+        continue;
+      }
+      top.expanded = true;
+      for (const entry of entries) {
+        const full = join(top.path, entry);
+        try {
+          if (statSync(full).isDirectory()) {
+            pendingDirs.push({ path: full, expanded: false });
+          } else {
+            unlinkSync(full);
+          }
+        } catch (err) {
+          process.stderr.write(`vagus: rmDirSafe skipped ${full}: ${err instanceof Error ? err.message : String(err)}\n`);
+        }
+      }
+    }
   }
 
   /** Lists archived projects with their sessions (scans the `archived/` dir). */
-  async listArchivedProjects(): Promise<Array<{ cwd: string; sessions: SessionHistoryItem[] }>> {
+  /** Lists archived projects with their sessions (scans the `archived/` dir).
+   *  dirKey is the encoded directory name — the unique identity of an archived
+   *  group (cwd from session headers can repeat across dirs). */
+  async listArchivedProjects(): Promise<Array<{ cwd: string; dirKey: string; sessions: SessionHistoryItem[] }>> {
     const agentDir = this.agentDirPath();
     const root = join(agentDir, "archived");
     if (!existsSync(root)) return [];
-    const out: Array<{ cwd: string; sessions: SessionHistoryItem[] }> = [];
+    const out: Array<{ cwd: string; dirKey: string; sessions: SessionHistoryItem[] }> = [];
     for (const entry of readdirSync(root)) {
       const dir = join(root, entry);
       try {
@@ -1195,6 +1308,7 @@ export class VagusEngine {
         if (!cwd) continue;
         out.push({
           cwd,
+          dirKey: entry,
           sessions: infos.map((i) => ({
             id: i.id,
             path: i.path,
@@ -1289,6 +1403,67 @@ export class VagusEngine {
     const session = this.requireSession(sessionId);
     const result = await session.navigateTree(targetId, options);
     return { editorText: result.editorText, cancelled: result.cancelled };
+  }
+
+  /**
+   * Creates a new session forked from a specific user message.
+   * The new session contains only the conversation up to and including that
+   * user message — everything after it is dropped. The original session is
+   * untouched. Returns the new session's info (sessionId, sessionFile, cwd).
+   */
+  async forkSession(sessionId: string, entryId: string): Promise<ActiveSession> {
+    const session = this.requireSession(sessionId);
+    const sourceFile = session.sessionManager?.getSessionFile();
+    if (!sourceFile) throw new Error("source session has no file path");
+    if (!existsSync(sourceFile)) throw new Error(`source session file not found: ${sourceFile}`);
+
+    // Read all entries from the source file
+    const raw = readFileSync(sourceFile, "utf8");
+    const lines = raw.split("\n").filter((l) => l.trim().length > 0);
+    const entries = lines.map((l) => JSON.parse(l));
+    const header = entries[0];
+    if (!header || header.type !== "session") throw new Error("source session has no header");
+
+    // Find the target entry index
+    const targetIdx = entries.findIndex((e) => e.id === entryId);
+    if (targetIdx < 0) throw new Error(`entry ${entryId} not found in source session`);
+
+    // Include context up to (but NOT including) the clicked user message — pi's
+    // native fork semantics: the selected message becomes the first new prompt,
+    // pre-filled in the editor. Everything before it carries over as context.
+    let endIdx = targetIdx - 1;
+    if (endIdx < 1) endIdx = 1; // at minimum include the header
+
+    // Build new session file: header + entries before the target
+    const cwd = session.sessionManager.getCwd() || this.options.cwd;
+    // New session lives in the SAME session directory as the source file
+    // (dirname of the source path IS the cwd-encoded session dir).
+    const sessionDir = dirname(sourceFile);
+    mkdirSync(sessionDir, { recursive: true });
+
+    const newSessionId = randomUUID();
+    const timestamp = new Date().toISOString();
+    const fileTimestamp = timestamp.replace(/[:.]/g, "-");
+    const newSessionFile = join(sessionDir, `${fileTimestamp}_${newSessionId}.jsonl`);
+
+    const newHeader = {
+      type: "session",
+      version: header.version ?? 1,
+      id: newSessionId,
+      timestamp,
+      cwd,
+      parentSession: sourceFile,
+    };
+
+    const outLines = [JSON.stringify(newHeader)];
+    for (let i = 1; i <= endIdx; i++) {
+      outLines.push(JSON.stringify(entries[i]));
+    }
+    writeFileSync(newSessionFile, outLines.join("\n") + "\n", "utf8");
+
+    // Open the new session and start it
+    const manager = SessionManager.open(newSessionFile);
+    return this.startSession({ cwd, sessionManager: manager });
   }
 
   /**

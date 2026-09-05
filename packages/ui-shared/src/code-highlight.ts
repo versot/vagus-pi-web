@@ -66,7 +66,7 @@ export interface CodeToken {
 export function highlightLine(code: string, pal: CodePalette): CodeToken[] {
   const out: CodeToken[] = [];
   const re =
-    /("(?:[^"\\]|\\.)*")|([a-zA-Z_$][\w$]*)(?=\s*:\s*[A-Z][A-Za-z0-9]*)|\b(const|let|var|function|return|import|export|from|new|type|interface|extends|async|await)\b|([a-zA-Z_$][\w$]*)(?=\s*:)|#[0-9a-fA-F]{3,8}\b|\b(?:true|false|null|undefined)\b|\b\d+(?:\.\d+)?\b/g;
+    /("(?:[^"\\]|\\.)*")|([a-zA-Z_$][\w$]*)(?=\s*:\s*[A-Z][A-Za-z0-9]*)|\b(const|let|var|function|return|import|export|from|new|type|interface|extends|async|await)\b|([a-zA-Z_$][\w$]*)(?=\s*:)|(#[0-9a-fA-F]{3,8}\b)|\b(true|false|null|undefined)\b|\b(\d+(?:\.\d+)?)\b/g;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(code)) !== null) {

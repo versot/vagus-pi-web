@@ -244,6 +244,14 @@ export interface ChatMessageProps {
   onCopy?: (text: string) => void;
   /** Submit an edited user message (sends as a new message instead of forking). */
   onEditSubmit?: (text: string) => void;
+  /** Fork the session at this user message. matchText is the raw entry text for
+   *  matching against forkPoints; displayText is the user-friendly form to
+   *  pre-fill in the editor after the fork (e.g. "/skill:xxx" for skill msgs). */
+  onFork?: (messageId: number, matchText: string, displayText: string) => void;
+  /** Show the copy button on an assistant reply (the final answer of a turn).
+   *  Passed only for the last non-thinking/tool message once the agent is
+   *  idle; everything else renders without a copy affordance. */
+  showCopy?: boolean;
 }
 
 /**
@@ -254,23 +262,58 @@ export interface ChatMessageProps {
  * Callbacks are intentionally not compared: they're stable behavior (dispatch
  * / copy) and any real change (session switch) rebuilds items from scratch.
  */
-function ChatMessageInner({ item, onToggleCard, onCopy, onEditSubmit }: ChatMessageProps): JSX.Element {
+function ChatMessageInner({ item, onToggleCard, onCopy, onEditSubmit, showCopy, onFork }: ChatMessageProps): JSX.Element {
   const t = useTokens();
+  // Copy-feedback state for the assistant reply's copy button (hooks must be
+  // at the top level, before any conditional returns).
+  const [copied, setCopied] = useState(false);
   if (item.kind === "user") {
-    return <UserMessage item={item} onCopy={onCopy} onEditSubmit={onEditSubmit} />;
+    return <UserMessage item={item} onCopy={onCopy} onEditSubmit={onEditSubmit} onFork={onFork} />;
   }
 
   if (item.kind === "assistant") {
+    const copyText = (): void => {
+      const text = item.text;
+      if (onCopy) {
+        onCopy(text);
+      } else {
+        void navigator.clipboard.writeText(text);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    };
     return (
       <div style={{ display: "flex", justifyContent: "flex-start" }}>
-        <div style={{
-          maxWidth: MESSAGE_MAX_WIDTH,
-          minWidth: 0, // let long unbroken strings (URLs) wrap inside flex
-          overflowWrap: "anywhere",
-          wordBreak: "break-word",
-          fontSize: "1em", lineHeight: 1.65, color: t.color.fg,
-        }}>
-          <Markdown text={item.text} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, maxWidth: MESSAGE_MAX_WIDTH, minWidth: 0 }}>
+          <div style={{
+            overflowWrap: "anywhere",
+            wordBreak: "break-word",
+            fontSize: "1em", lineHeight: 1.65, color: t.color.fg,
+          }}>
+            <Markdown text={item.text} />
+          </div>
+          {showCopy && (
+            <div style={{ display: "flex", justifyContent: "flex-start", minHeight: 20 }}>
+              <button
+                onClick={copyText}
+                title={copied ? "已复制" : "复制回答"}
+                style={{
+                  width: 26, height: 26, borderRadius: 6, border: "none", background: "transparent",
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  fontFamily: "inherit", color: copied ? "#16a34a" : t.color.muted, transition: "color 0.15s",
+                  opacity: 0.4,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.4"; }}
+              >
+                {copied ? (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M20 6L9 17l-5-5"/></svg>
+                ) : (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -317,7 +360,7 @@ const userToolBtnStyle: CSSProperties = {
   fontFamily: "inherit",
 };
 
-function UserMessage({ item, onCopy, onEditSubmit }: { item: Extract<ChatItem, { kind: "user" }>; onCopy?: (text: string) => void; onEditSubmit?: (text: string) => void }): JSX.Element {
+function UserMessage({ item, onCopy, onEditSubmit, onFork }: { item: Extract<ChatItem, { kind: "user" }>; onCopy?: (text: string) => void; onEditSubmit?: (text: string) => void; onFork?: (messageId: number, matchText: string, displayText: string) => void }): JSX.Element {
   const t = useTokens();
   const parsed = parseSkillMessage(item);
   const [editing, setEditing] = useState(false);
@@ -429,12 +472,28 @@ function UserMessage({ item, onCopy, onEditSubmit }: { item: Extract<ChatItem, {
               item.text && /<skill\s/.test(item.text) ? renderTextWithSkills(item.text) : parsed.args
             )}
           </div>
-          {(onCopy || onEditSubmit) && (
+          {(onCopy || onEditSubmit || onFork) && (
             <div
-              style={{ display: "flex", gap: 4, opacity: 0.55, transition: "opacity 0.15s" }}
-              onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.55"; }}
+              style={{ display: "flex", gap: 4 }}
             >
+              {onFork && (
+                <button
+                  onClick={() => onFork(item.id, item.text, parsed.copyText)}
+                  title="从此处派生新对话（创建新会话保留到此为止的上下文）"
+                  style={{
+                    ...toolBtn(t.color.muted),
+                    opacity: 0.5, transition: "opacity 0.15s, color 0.15s",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.5"; }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M6 3v12a4 4 0 0 0 4 4h4"/>
+                    <path d="M14 19l3-3-3-3"/>
+                    <path d="M6 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>
+                  </svg>
+                </button>
+              )}
               {onCopy && (
                 <button
                   onClick={handleCopy}

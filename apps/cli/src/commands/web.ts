@@ -79,6 +79,8 @@ export async function runWeb(): Promise<number> {
   child.on("exit", (code, signal) => {
     if (!opened && code !== 0) {
       process.stderr.write(`pi-web: daemon exited (code ${code ?? "?"}, signal ${signal ?? "none"}) before the UI was ready.\n`);
+    } else {
+      process.stderr.write(`pi-web: daemon exited (code ${code ?? "?"}, signal ${signal ?? "none"}).\n`);
     }
     process.exit(code ?? 0);
   });

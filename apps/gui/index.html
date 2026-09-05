@@ -24,6 +24,11 @@
       @keyframes vagus-breath { 0%, 100% { box-shadow: 0 6px 28px rgba(99,102,241,0.08), 0 0 0 0 rgba(99,102,241,0); border-color: rgba(99,102,241,0.2); } 50% { box-shadow: 0 6px 36px rgba(99,102,241,0.18), 0 0 0 3px rgba(99,102,241,0.06); border-color: rgba(99,102,241,0.5); } }
       /* Extension-notify toast slide-up */
       @keyframes vagus-toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+      /* Sidebar marquee: single-direction seamless loop; content is doubled while hovered, -50% = exactly one copy+gap */
+      @keyframes vagus-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+      .vagus-marquee:hover { text-overflow: clip; }
+      /* Row hover hides the time label so the name window widens for scrolling */
+      .vagus-session-row:hover .vagus-row-time { display: none; }
       /* Hide the history-nav rail's own scrollbar (ticks overflow internally) */
       .vagus-nav-scroll { scrollbar-width: none; -ms-overflow-style: none; }
       .vagus-nav-scroll::-webkit-scrollbar { display: none; }

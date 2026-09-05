@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from "node
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { join, normalize, resolve, sep } from "node:path";
+import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 import { ConfigStore } from "@vagus/host-config";
 import { EventBus, type CoreEventMap } from "@vagus/host-events";
 import { VagModelsStore } from "@vagus/host-models";
@@ -37,6 +38,35 @@ function requireString(value: unknown, label: string): string {
     throw new Error(`${label} must be a non-empty string`);
   }
   return value;
+}
+
+/**
+ * Applies the pi-configured HTTP proxy (settings.json `httpProxy`) to the
+ * global fetch dispatcher — mirroring what `pi`'s CLI does at startup
+ * (configureHttpDispatcher). The pi SDK does NOT set this itself, so without
+ * it web-session model requests would bypass the proxy and fail for
+ * region-blocked providers like b.ai. Falls back to HTTPS_PROXY/HTTP_PROXY
+ * env vars the process may already carry.
+ */
+function applyHttpProxy(): void {
+  try {
+    let proxy: string | undefined;
+    const settingsFile = join(piAgentDir(), "settings.json");
+    if (existsSync(settingsFile)) {
+      const s = JSON.parse(readFileSync(settingsFile, "utf8")) as { httpProxy?: unknown };
+      if (typeof s.httpProxy === "string" && s.httpProxy.trim()) proxy = s.httpProxy.trim();
+    }
+    proxy ??= process.env.HTTPS_PROXY ?? process.env.HTTP_PROXY;
+    if (proxy) {
+      const normalized = /^https?:\/\//.test(proxy) ? proxy : `http://${proxy}`;
+      process.env.HTTPS_PROXY = normalized;
+      process.env.HTTP_PROXY = normalized;
+      setGlobalDispatcher(new EnvHttpProxyAgent());
+      process.stderr.write(`vagus: http proxy enabled → ${normalized}\n`);
+    }
+  } catch (err) {
+    process.stderr.write(`vagus: proxy setup skipped: ${err instanceof Error ? err.message : String(err)}\n`);
+  }
 }
 
 /**
@@ -102,6 +132,9 @@ function builtinExtensionPaths(): string[] {
 }
 
 export async function runDaemon(): Promise<number> {
+  // Apply the pi proxy setting before any SDK/network activity — without it,
+  // model requests bypass the proxy and fail for region-blocked providers.
+  applyHttpProxy();
   const stateDir = defaultStateDir();
   mkdirSync(stateDir, { recursive: true });
 
@@ -195,16 +228,20 @@ export async function runDaemon(): Promise<number> {
     });
 
     srv.registerMethod("project.unarchive", (params) => {
-      const cwd = requireString((params as { cwd?: unknown } | undefined)?.cwd, "cwd");
-      return host.restoreProject(cwd);
+      const { cwd, dirKey } = (params ?? {}) as { cwd?: unknown; dirKey?: unknown };
+      if (typeof dirKey === "string" && dirKey) return host.unarchiveProjectByDir(dirKey);
+      return host.restoreProject(requireString(cwd, "cwd"));
     });
 
     srv.registerMethod("project.archived", () => host.listArchivedProjects());
 
     // Permanently delete an archived project (its archived session dir).
+    // dirKey (the encoded archive-dir name) is preferred — it's the unique
+    // identity; cwd falls back for older clients.
     srv.registerMethod("project.delete", (params) => {
-      const cwd = requireString((params as { cwd?: unknown } | undefined)?.cwd, "cwd");
-      return host.deleteArchivedProject(cwd);
+      const { cwd, dirKey } = (params ?? {}) as { cwd?: unknown; dirKey?: unknown };
+      if (typeof dirKey === "string" && dirKey) return host.deleteArchivedProjectByDir(dirKey);
+      return host.deleteArchivedProject(requireString(cwd, "cwd"));
     });
 
     // Quick-access roots for the picker: places (Home, Desktop, …) + drives (C:, …).
@@ -646,6 +683,10 @@ export async function runDaemon(): Promise<number> {
       const { sessionId } = (params ?? {}) as { sessionId?: unknown };
       return host.listForkPoints(requireString(sessionId, "sessionId"));
     });
+    srv.registerMethod("session.fork", async (params) => {
+      const { sessionId, entryId } = (params ?? {}) as { sessionId?: unknown; entryId?: unknown };
+      return host.forkSession(requireString(sessionId, "sessionId"), requireString(entryId, "entryId"));
+    });
     srv.registerMethod("session.tree", (params) => {
       const { sessionId } = (params ?? {}) as { sessionId?: unknown };
       return host.getSessionTree(requireString(sessionId, "sessionId"));
@@ -771,9 +812,12 @@ export async function runDaemon(): Promise<number> {
   });
 
   let shuttingDown = false;
-  const shutdown = (): void => {
+  const shutdown = (signal: string): void => {
     if (shuttingDown) return;
     shuttingDown = true;
+    // Trace who/what triggered the shutdown — a stray signal with no visible
+    // cause is undiagnosable after the fact.
+    process.stderr.write(`vagus: daemon shutting down (${signal})\n${new Error("shutdown trace").stack}\n`);
     void (async () => {
       try {
         wsHost.close();
@@ -784,11 +828,27 @@ export async function runDaemon(): Promise<number> {
       }
     })();
   };
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  // Exit diagnostics: distinguish "event loop drained" from a forced exit.
+  process.on("beforeExit", (code) => {
+    process.stderr.write(`vagus: daemon beforeExit (event loop empty), code=${code}\n`);
+  });
+  process.on("exit", (code) => {
+    process.stderr.write(`vagus: daemon exit, code=${code}\n`);
+  });
 
   transport.start();
   process.stderr.write(`pi-web daemon ready (state: ${stateDir})\n`);
+  // Crash guards: a dying daemon takes every open session with it. A stray
+  // rejection (e.g. a disposed session's event bubbling out during an archive
+  // delete) must LOG, not kill the process.
+  process.on("uncaughtException", (err) => {
+    process.stderr.write(`vagus: uncaught exception: ${err?.stack ?? String(err)}\n`);
+  });
+  process.on("unhandledRejection", (reason) => {
+    process.stderr.write(`vagus: unhandled rejection: ${reason instanceof Error ? (reason.stack ?? reason.message) : String(reason)}\n`);
+  });
   // Run until killed; shutdown is handled by the signal handlers above.
   return new Promise<number>(() => {});
 }

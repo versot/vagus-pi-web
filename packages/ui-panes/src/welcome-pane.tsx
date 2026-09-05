@@ -14,12 +14,18 @@ export function WelcomePane(props: {
   onSelectProject: (id: string) => void;
   onNewProject: () => void;
   inputCard: Omit<InputCardProps, "variant">;
+  /** Extension status texts to show ABOVE the input bar (ctx.ui.setStatus). */
+  aboveEditorStatuses?: Record<string, string>;
+  /** Extension widgets to show ABOVE the input bar (placement="aboveEditor"). */
+  aboveEditorWidgets?: Record<string, { lines: string[] }>;
+  /** Sidebar is collapsed — widen the content's max width to use the space. */
+  wide?: boolean;
 }): JSX.Element {
   const t = useTokens();
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, justifyContent: "center" }}>
-      <div style={{ width: "100%", maxWidth: 760, margin: "0 auto", padding: "32px 28px", display: "flex", flexDirection: "column" }}>
+      <div style={{ width: "100%", maxWidth: props.wide ? 900 : 760, margin: "0 auto", padding: "32px 28px", display: "flex", flexDirection: "column" }}>
         {/* 品牌问候区 */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 22, userSelect: "none" }}>
           <div style={{
@@ -41,6 +47,33 @@ export function WelcomePane(props: {
           onNewProject={props.onNewProject}
         />
         <div style={{ marginTop: 10 }}>
+          {(() => {
+            const statusEntries = Object.entries(props.aboveEditorStatuses ?? {}).filter(([, text]) => text.length > 0);
+            const widgetEntries = Object.entries(props.aboveEditorWidgets ?? {}).filter(([, w]) => w.lines.length > 0);
+            if (statusEntries.length === 0 && widgetEntries.length === 0) return null;
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
+                {statusEntries.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+                    {statusEntries.map(([key, text]) => (
+                      <span key={key} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 999, background: t.color.surface, border: `1px solid ${t.color.border}`, fontSize: "0.8em", color: t.color.fg }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: t.color.primary }} />
+                        <span style={{ color: t.color.muted, fontWeight: 600 }}>{key}</span>
+                        <span>{text}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {widgetEntries.map(([key, w]) => (
+                  <div key={key} style={{ display: "flex", flexWrap: "wrap", gap: "4px 10px", fontSize: "0.8em", color: t.color.muted, alignItems: "center", justifyContent: "center" }}>
+                    {w.lines.map((line, i) => (
+                      <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>{line}</span>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
           <InputCard {...props.inputCard} variant="welcome" />
         </div>
       </div>

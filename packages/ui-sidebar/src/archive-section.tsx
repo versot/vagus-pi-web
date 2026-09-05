@@ -5,6 +5,8 @@ import { BubbleIcon, collapsible, projectName, timeAgo, ROW_TRANSITION } from ".
 
 export interface ArchivedProject {
   cwd: string;
+  /** Encoded archive-dir name — the unique identity of this archived group. */
+  dirKey: string;
   sessions: SessionHistoryItem[];
 }
 
@@ -20,7 +22,9 @@ export function ArchiveSection(props: {
   onToggleProject: (key: string) => void;
   onOpenSession: (path: string) => void;
   onSessionContextMenu: (e: React.MouseEvent, session: SessionHistoryItem, archived: boolean) => void;
-  onProjectContextMenu: (e: React.MouseEvent, cwd: string) => void;
+  onProjectContextMenu: (e: React.MouseEvent, cwd: string, dirKey: string) => void;
+  /** Right-click on the section title — clear ALL archived projects. */
+  onSectionContextMenu?: (e: React.MouseEvent) => void;
 }): JSX.Element | null {
   const t = useTokens();
   const [open, setOpen] = useState(false);
@@ -38,6 +42,7 @@ export function ArchiveSection(props: {
       {/* 已归档 — archived projects live here until permanently deleted */}
       <div
         onClick={() => setOpen((o) => !o)}
+        onContextMenu={(e) => { if (props.onSectionContextMenu) { e.preventDefault(); props.onSectionContextMenu(e); } }}
         style={{
           display: "flex", alignItems: "center", gap: 8,
           padding: "8px 10px", borderRadius: 8, cursor: "pointer", userSelect: "none",
@@ -54,13 +59,13 @@ export function ArchiveSection(props: {
       </div>
       {collapsible(open, (
         <div style={{ paddingLeft: 6 }}>
-          {groups.map(({ cwd, sessions: groupSessions }) => {
+          {groups.map(({ cwd, dirKey, sessions: groupSessions }) => {
             const isOpen = !props.collapsed.has(`arch:${cwd}`);
             return (
               <div key={cwd} style={{ marginBottom: 1 }}>
                 <div
                   onClick={() => props.onToggleProject(`arch:${cwd}`)}
-                  onContextMenu={(e) => props.onProjectContextMenu(e, cwd)}
+                  onContextMenu={(e) => props.onProjectContextMenu(e, cwd, dirKey)}
                   style={{
                     display: "flex", alignItems: "center", gap: 8,
                     padding: "6px 8px", borderRadius: 8, cursor: "pointer", userSelect: "none",

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useTheme, useTokens } from "@vagus/ui-tokens";
 import type { SessionHistoryItem } from "@vagus/ui-tokens";
 import { ArchiveSection } from "./archive-section.js";
@@ -20,6 +20,57 @@ import { BubbleIcon, collapsible, projectName, timeAgo, ROW_TRANSITION } from ".
 const BRAND_A = "#6366f1";
 const BRAND_B = "#8b5cf6";
 const RING = "0 0 0 2px rgba(99,102,241,0.4)";
+
+/**
+ * Truncated-with-ellipsis text that reveals its full content while hovered:
+ * on mouseenter the content is doubled (with a gap) and translated in a
+ * single-direction seamless loop (-50% = one copy); un-hover restores the
+ * ellipsis view. Sibling elements (time, icons) are never covered — the
+ * outer span keeps overflow:hidden. Used for sidebar session/project names.
+ */
+function Marquee({ text, style }: { text: string; style?: CSSProperties }): JSX.Element {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [looping, setLooping] = useState(false);
+  // Single text copy's layout width — the loop travels textW + GAP per cycle,
+  // so duration = (textW + GAP) / SPEED keeps px/s identical across rows.
+  const textWRef = useRef(0);
+  const GAP = 32;
+  const SPEED = 30; // px per second, same for every row
+  return (
+    <span
+      ref={ref}
+      style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0, ...style }}
+      onMouseEnter={() => {
+        // Wait a frame: hovering may widen this span (e.g. the row's time
+        // label hides via CSS), so measure only after layout settles.
+        requestAnimationFrame(() => {
+          const outer = ref.current;
+          const inner = outer?.firstChild as HTMLElement | null;
+          if (!outer || !inner) return;
+          const textW = inner.offsetWidth;
+          textWRef.current = textW;
+          if (textW - outer.clientWidth > 2) setLooping(true);
+        });
+      }}
+      onMouseLeave={() => setLooping(false)}
+    >
+      {looping ? (
+        <span
+          style={{
+            display: "inline-block", whiteSpace: "nowrap",
+            // constant px/s across all rows: duration ∝ loop distance
+            animation: `vagus-marquee ${((textWRef.current + GAP) / SPEED).toFixed(2)}s linear infinite`,
+          }}
+        >
+          <span style={{ paddingRight: GAP }}>{text}</span>
+          <span style={{ paddingRight: GAP }}>{text}</span>
+        </span>
+      ) : (
+        <span style={{ display: "inline-block", whiteSpace: "nowrap" }}>{text}</span>
+      )}
+    </span>
+  );
+}
 
 interface SessionSidebarProps {
   sessions: SessionHistoryItem[];
@@ -44,7 +95,7 @@ interface SessionSidebarProps {
   /** Set of pinned session paths. */
   pinnedSessions?: Set<string>;
   /** Archived projects (cwd + sessions), hidden from the active tree. */
-  archivedProjects?: Array<{ cwd: string; sessions: SessionHistoryItem[] }>;
+  archivedProjects?: Array<{ cwd: string; dirKey: string; sessions: SessionHistoryItem[] }>;
   /** Archive a project (moves it to the archived section). */
   onArchiveProject?: (cwd: string) => void | Promise<void>;
   /** Restore an archived project back to the active tree. */
@@ -55,6 +106,10 @@ interface SessionSidebarProps {
   busyPaths?: Set<string>;
   /** Session-file paths that have a pending ctx.ui dialog awaiting a response. */
   pendingDialogPaths?: Set<string>;
+  /** Notified when the sidebar collapses/expands (host may widen the chat pane). */
+  onCollapsedChange?: (collapsed: boolean) => void;
+  /** Permanently delete ALL archived projects (confirm handled inside host). */
+  onClearAllArchived?: () => void;
 }
 
 export function SessionSidebar({
@@ -67,6 +122,8 @@ export function SessionSidebar({
   onRenameSession,
   onDeleteSession,
   onArchiveSession,
+  onClearAllArchived,
+  onCollapsedChange,
   onRestoreSession,
   onDeleteArchivedSession,
   onTogglePin,
@@ -80,12 +137,22 @@ export function SessionSidebar({
 }: SessionSidebarProps): JSX.Element {
   const t = useTokens();
   const { theme } = useTheme();
-  const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
+  // Collapsed project folders — persisted in localStorage so expansion state
+  // survives page refreshes AND daemon restarts (browser-side, zero backend).
+  const COLLAPSED_KEY = "vagus.sidebar.collapsedProjects";
+  const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? "[]") as string[]);
+    } catch {
+      return new Set();
+    }
+  });
   /** Context menu state: session / project / archived-project. */
   const [menu, setMenu] = useState<
     | { x: number; y: number; kind: "session"; session: SessionHistoryItem; archived?: boolean }
     | { x: number; y: number; kind: "project"; cwd: string }
-    | { x: number; y: number; kind: "archived"; cwd: string }
+    | { x: number; y: number; kind: "archived"; cwd: string; dirKey: string }
+    | { x: number; y: number; kind: "archivedAll" }
     | null
   >(null);
   /** Session currently being renamed (path). */
@@ -107,11 +174,14 @@ export function SessionSidebar({
     ] as [string, SessionHistoryItem[]]);
   }, [sessions, pinnedSessions]);
 
-  const toggleProject = (cwd: string): void => {
+  const toggleProject = (key: string): void => {
     setCollapsedProjects((prev) => {
       const next = new Set(prev);
-      if (next.has(cwd)) next.delete(cwd);
-      else next.add(cwd);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      try {
+        localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...next]));
+      } catch { /* private mode — skip persistence */ }
       return next;
     });
   };
@@ -176,6 +246,25 @@ export function SessionSidebar({
   const currentCwd = activeSession?.cwd;
 
   const SIDEBAR_W = 280;
+  const SIDEBAR_W_COLLAPSED = 48;
+  // Sidebar collapse state — collapsed shows a narrow rail with icon-only
+  // buttons (new chat / plugins / settings) and an expand chevron.
+  // Persisted in localStorage: survives refreshes and daemon restarts.
+  const SIDEBAR_COLLAPSED_KEY = "vagus.sidebar.collapsed";
+  const [collapsed, setCollapsedState] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const setCollapsed = (v: boolean): void => {
+    setCollapsedState(v);
+    onCollapsedChange?.(v);
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, v ? "1" : "0");
+    } catch { /* private mode — skip persistence */ }
+  };
   /** Indigo tint for the active row (alpha differs per theme). */
   const tint = theme === "light" ? "rgba(99,102,241,0.10)" : "rgba(99,102,241,0.16)";
   /** Primary action button — brand gradient, used for 新对话. */
@@ -192,16 +281,68 @@ export function SessionSidebar({
 
   return (
     <aside style={{
-      width: SIDEBAR_W, flexShrink: 0,
+      width: collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W, flexShrink: 0,
       borderRight: `1px solid ${t.color.border}`,
       background: t.color.sidebarBg,
       display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden",
       position: "relative",
+      transition: "width 0.18s ease",
     }}>
+      {collapsed ? (
+        <>
+          {/* Collapsed rail: expand button on top, then icon-only actions */}
+          <div style={{ flex: "none", height: 54, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: `1px solid ${t.color.border}` }}>
+            <button
+              title="展开侧栏"
+              onClick={() => setCollapsed(false)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 8, border: "none", background: "transparent", color: t.color.muted, cursor: "pointer", transition: ROW_TRANSITION, outline: "none" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover; (e.currentTarget as HTMLElement).style.color = t.color.fg; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = t.color.muted; }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+          <div style={{ flex: "none", padding: "14px 8px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            <button title="新对话" onClick={onNewSession}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 9, border: "none", cursor: "pointer", outline: "none", background: `linear-gradient(135deg, ${BRAND_A}, ${BRAND_B})`, color: "#fff", boxShadow: "0 2px 10px rgba(99,102,241,0.35)" }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+            </button>
+            <button title="插件" onClick={onOpenPlugins}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 9, border: "none", background: "transparent", color: t.color.muted, cursor: "pointer", transition: ROW_TRANSITION, outline: "none" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover; (e.currentTarget as HTMLElement).style.color = t.color.fg; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = t.color.muted; }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-3 3a5 5 0 0 0-.5 7.5z"/><path d="M14 10a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l3-3a5 5 0 0 0 .5-7.5z"/></svg>
+            </button>
+          </div>
+          <div style={{ flex: 1 }} />
+          <div style={{ flex: "none", borderTop: `1px solid ${t.color.border}`, padding: 8, display: "flex", justifyContent: "center" }}>
+            <button title="设置" onClick={onOpenSettings}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 9, border: "none", background: "transparent", color: t.color.muted, cursor: "pointer", transition: ROW_TRANSITION, outline: "none" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover; (e.currentTarget as HTMLElement).style.color = t.color.fg; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = t.color.muted; }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
       {/* Brand —— 固定高 54，底部横线与中间栏/第三栏对齐成一根 */}
       <div style={{ flex: "none", height: 54, display: "flex", alignItems: "center", gap: 8, padding: "0 16px", borderBottom: `1px solid ${t.color.border}` }}>
         <span style={{ width: 26, height: 26, borderRadius: 7, background: `linear-gradient(135deg,${BRAND_A},${BRAND_B})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "0.93em", fontWeight: 700, flexShrink: 0, boxShadow: "0 2px 6px rgba(99,102,241,0.4)" }}>◈</span>
         <span style={{ fontSize: "1.05em", fontWeight: 700, color: t.color.fg }}>vagusPI</span>
+        <span style={{ flex: 1 }} />
+        <button
+          title="收起侧栏"
+          onClick={() => setCollapsed(true)}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 8, border: "none", background: "transparent", color: t.color.muted, cursor: "pointer", transition: ROW_TRANSITION, outline: "none", flexShrink: 0 }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover; (e.currentTarget as HTMLElement).style.color = t.color.fg; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = t.color.muted; }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
       </div>
 
       {/* 新对话（主按钮）+ 插件（占位） */}
@@ -266,7 +407,7 @@ export function SessionSidebar({
               >
                 {isActive && <span style={{ position: "absolute", left: 0, top: 8, bottom: 8, width: 3, borderRadius: 3, background: `linear-gradient(180deg,${BRAND_A},${BRAND_B})` }} />}
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ flexShrink: 0, color: isActive ? BRAND_A : t.color.muted }}><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
-                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{projectName(cwd)}</span>
+                <Marquee text={projectName(cwd)} style={{ flex: 1 }} />
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, color: t.color.muted, transform: isOpen ? "rotate(0)" : "rotate(-90deg)", transition: "transform 0.15s ease" }}><path d="M9 18l6-6-6-6"/></svg>
               </div>
               {collapsible(isOpen, (
@@ -277,6 +418,7 @@ export function SessionSidebar({
                     return (
                       <div
                         key={s.id}
+                        className="vagus-session-row"
                         onClick={() => onOpenSession(s.path)}
                         onContextMenu={(e) => onContextMenu(e, s)}
                         onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover; }}
@@ -310,9 +452,7 @@ export function SessionSidebar({
                             }}
                           />
                         ) : (
-                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>
-                            {(s.name ?? s.firstMessage.slice(0, 40)) || "（空会话）"}
-                          </span>
+                          <Marquee text={(s.name ?? s.firstMessage.slice(0, 40)) || "（空会话）"} />
                         )}
                         <span style={{ width: 14, display: "inline-flex", justifyContent: "center", alignItems: "center", flexShrink: 0 }}>
                           {pinnedSessions.has(s.path) && (
@@ -325,7 +465,7 @@ export function SessionSidebar({
                           )}
                         </span>
 
-                        <span style={{ fontSize: "0.79em", color: t.color.muted, flexShrink: 0 }}>{timeAgo(s.modified)}</span>
+                        <span className="vagus-row-time" style={{ fontSize: "0.79em", color: t.color.muted, flexShrink: 0 }}>{timeAgo(s.modified)}</span>
                       </div>
                     );
                   })}
@@ -355,7 +495,7 @@ export function SessionSidebar({
                   }}
                 >
                   <BubbleIcon />
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>{s.name ?? s.firstMessage.slice(0, 40)}</span>
+                  <Marquee text={s.name ?? s.firstMessage.slice(0, 40)} />
                 </div>
               ))}
             </div>
@@ -369,7 +509,8 @@ export function SessionSidebar({
           onToggleProject={toggleProject}
           onOpenSession={onOpenSession}
           onSessionContextMenu={(e, s, a) => onContextMenu(e, s, a)}
-          onProjectContextMenu={(e, cwd) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, kind: "archived", cwd }); }}
+          onProjectContextMenu={(e, cwd, dirKey) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, kind: "archived", cwd, dirKey }); }}
+          onSectionContextMenu={(e) => setMenu({ x: e.clientX, y: e.clientY, kind: "archivedAll" })}
         />
       </div>
 
@@ -439,16 +580,22 @@ export function SessionSidebar({
               归档项目
             </div>
           )}
+          {menu.kind === "archivedAll" && (
+            <div onClick={() => { setMenu(null); onClearAllArchived?.(); }} style={{...menuItemStyle, color: "#E5484D"}} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg>
+              清空全部归档
+            </div>
+          )}
           {menu.kind === "archived" && (
             <>
               {onUnarchiveProject && (
-                <div onClick={() => { setMenu(null); void onUnarchiveProject(menu.cwd); }} style={menuItemStyle} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+                <div onClick={() => { setMenu(null); void onUnarchiveProject(menu.dirKey); }} style={menuItemStyle} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 8l-2-4H5L3 8v2h18V8z"/><path d="M3 10v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8"/><path d="M12 13v3"/></svg>
                   恢复项目
                 </div>
               )}
               {onDeleteProject && (
-                <div onClick={() => { setMenu(null); void onDeleteProject(menu.cwd); }} style={{...menuItemStyle, color: "#E5484D"}} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+                <div onClick={() => { setMenu(null); void onDeleteProject(menu.dirKey); }} style={{...menuItemStyle, color: "#E5484D"}} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
                   彻底删除
                 </div>
@@ -456,6 +603,8 @@ export function SessionSidebar({
             </>
           )}
         </div>
+      )}
+        </>
       )}
     </aside>
   );
