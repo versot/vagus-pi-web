@@ -3,7 +3,7 @@ import { tr } from "@vagus/ui-shared";
 import { useTheme, useTokens } from "@vagus/ui-tokens";
 import type { SessionHistoryItem } from "@vagus/ui-tokens";
 import { ArchiveSection } from "./archive-section.js";
-import { BubbleIcon, collapsible, projectName, timeAgo, ROW_TRANSITION } from "./common.js";
+import { BubbleIcon, collapsible, projectName, timeAgo, TIME_W, ROW_TRANSITION } from "./common.js";
 
 /**
  * Left sidebar — project tree navigation.
@@ -455,18 +455,18 @@ export function SessionSidebar({
                         ) : (
                           <Marquee text={(s.name ?? s.firstMessage.slice(0, 40)) || "（空会话）"} />
                         )}
-                        <span style={{ width: 14, display: "inline-flex", justifyContent: "center", alignItems: "center", flexShrink: 0 }}>
-                          {pinnedSessions.has(s.path) && (
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ color: BRAND_A }}><path d="M12 17l-5.88 3.09.87-6.02L2.6 9.43l6.44-.94L12 2.5l2.96 5.99 6.44.94-4.39 4.64.87 6.02z"/></svg>
-                          )}
-                        </span>
                         <span style={{ width: 12, display: "inline-flex", justifyContent: "center", alignItems: "center", flexShrink: 0 }}>
                           {(busyPaths.has(s.path) || pendingDialogPaths.has(s.path)) && (
                             <span title={tr("工作中")} style={{ width: 7, height: 7, borderRadius: "50%", background: t.color.primary, animation: "vagus-pulse 1.2s ease-in-out infinite", display: "inline-block" }} />
                           )}
                         </span>
+                        <span style={{ width: 14, display: "inline-flex", justifyContent: "center", alignItems: "center", flexShrink: 0 }}>
+                          {pinnedSessions.has(s.path) && (
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ color: BRAND_A }}><path d="M12 17l-5.88 3.09.87-6.02L2.6 9.43l6.44-.94L12 2.5l2.96 5.99 6.44.94-4.39 4.64.87 6.02z"/></svg>
+                          )}
+                        </span>
 
-                        <span className="vagus-row-time" style={{ fontSize: "0.79em", color: t.color.muted, flexShrink: 0 }}>{timeAgo(s.modified)}</span>
+                        <span className="vagus-row-time" style={{ width: TIME_W, textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: "0.79em", color: t.color.muted, flexShrink: 0 }}>{timeAgo(s.modified)}</span>
                       </div>
                     );
                   })}

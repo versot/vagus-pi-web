@@ -31,6 +31,8 @@ export interface SessionUsage {
 }
 
 interface InputBarProps {
+  /** Extension status/widget dock slot (rendered in the footer row, left of the model picker). */
+  dock?: React.ReactNode;
   value: string;
   onChange: (v: string) => void;
   onSubmit: () => void;
@@ -84,7 +86,7 @@ function fmt(n: number): string {
   return String(Math.round(n));
 }
 
-export function InputBar({ value, onChange, onSubmit, usage, providers, onSwitchModel, onSetThinking, thinkingLevel = "off", permissionMode, onTogglePermission, attachments = [], fileAttachments = [], onAttach, onRemoveAttachment, onCommand, commands = [], onPickCommand, onRefreshCommands, focusSignal, busy = false, hasPendingDialog = false, onRestoreDialog, onStop, selectedModel, queuedMessages = [] }: InputBarProps): JSX.Element {
+export function InputBar({ value, onChange, onSubmit, usage, providers, onSwitchModel, onSetThinking, thinkingLevel = "off", permissionMode, onTogglePermission, attachments = [], fileAttachments = [], onAttach, onRemoveAttachment, onCommand, commands = [], onPickCommand, onRefreshCommands, focusSignal, busy = false, hasPendingDialog = false, onRestoreDialog, onStop, selectedModel, queuedMessages = [], dock }: InputBarProps): JSX.Element {
   const t = useTokens();
   const [menuOpen, setMenuOpen] = useState(false);
   // Inline "/" command dropdown state (open + keyboard selection index).
@@ -515,6 +517,9 @@ export function InputBar({ value, onChange, onSubmit, usage, providers, onSwitch
           )}
         </div>
         )}
+
+        {/* extension status/widget dock (hover to expand) */}
+        {dock}
 
         {/* model picker (grouped by provider) */}
         <div ref={modelRef} style={{ position: "relative" }}>

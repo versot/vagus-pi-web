@@ -167,6 +167,13 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
   }, [uiWidgets, state.activeId]);
   // Extension widgets that render ABOVE the input bar (placement="aboveEditor")
   // for the active session only.
+  const toastNode = uiToast ? (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 9, padding: "10px 16px", borderRadius: 12, background: t.color.surface, border: `1px solid ${t.color.border}`, boxShadow: "0 12px 40px rgba(0,0,0,0.25)", fontSize: "0.88em", color: t.color.fg, maxWidth: "min(90vw, 560px)" }}>
+      <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, marginTop: 5, background: uiToast.type === "error" ? "#E5484D" : uiToast.type === "warning" ? "#B7791F" : t.color.primary }} />
+      <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{uiToast.text}</span>
+    </div>
+  ) : null;
+
   const aboveEditorWidgets = useMemo(() => {
     const out: Record<string, { lines: string[] }> = {};
     for (const [key, w] of Object.entries(uiWidgets)) {
@@ -1159,7 +1166,7 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
         /* 欢迎页：侧栏 + 品牌问候区 + 项目选择器 + 输入卡 */
         <div style={{ flex: 1, display: "flex", flexDirection: "row", minWidth: 0 }}>
           <SessionSidebar {...sidebarProps} />
-          <WelcomePane wide={sidebarCollapsed} activeProject={activeProject} projects={projects} onSelectProject={selectProject} onNewProject={() => setPickerOpen(true)} inputCard={inputCard} aboveEditorWidgets={aboveEditorWidgets} aboveEditorStatuses={uiStatuses} />
+          <WelcomePane wide={sidebarCollapsed} activeProject={activeProject} projects={projects} onSelectProject={selectProject} onNewProject={() => setPickerOpen(true)} inputCard={inputCard} dockStatuses={uiStatuses} dockWidgets={aboveEditorWidgets} toast={toastNode} />
         </div>
       ) : (
         /* 对话页：侧栏 + 聊天流 + 右视图（可插拔） */
@@ -1185,8 +1192,9 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
             onUiCardRespond={onUiCardRespond}
             onLoadMore={loadMoreHistory}
             loadingMore={loadingMoreHistory}
-            aboveEditorWidgets={aboveEditorWidgets}
-            aboveEditorStatuses={uiStatuses}
+            dockStatuses={uiStatuses}
+            dockWidgets={aboveEditorWidgets}
+            toast={toastNode}
             onOpenFile={openFileDiff}
             onRevertAll={(files: string[]) => void revertAll(files)}
           />
@@ -1231,13 +1239,6 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
           Extension status texts are rendered by ChatPane/WelcomePane above the
           input via the aboveEditorStatuses prop, so only the transient toast
           lives here. */}
-      {uiToast && (
-        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 10001, display: "flex", alignItems: "flex-start", gap: 9, padding: "10px 16px", borderRadius: 12, background: t.color.surface, border: `1px solid ${t.color.border}`, boxShadow: "0 12px 40px rgba(0,0,0,0.25)", fontSize: "0.88em", color: t.color.fg, animation: "vagus-toast-in 0.2s ease", maxWidth: "min(90vw, 560px)" }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, marginTop: 5, background: uiToast.type === "error" ? "#E5484D" : uiToast.type === "warning" ? "#B7791F" : t.color.primary }} />
-          <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{uiToast.text}</span>
-        </div>
-      )}
-
       {revertReport && <RevertReportModal report={revertReport} onClose={() => setRevertReport(null)} />}
     </div>
   );

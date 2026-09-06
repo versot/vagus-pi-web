@@ -12,3 +12,5 @@ export { WIDGET_TAB, WidgetPanelContent } from "./widget-panel.js";
 export { RevertReportModal } from "./revert-report-modal.js";
 export type { RevertReport } from "./revert-report-modal.js";
 export type { RevertResult } from "@vagus/ui-chat";
+export { StatusDock } from "./status-dock.js";
+export { ToastHost } from "./toast-host.js";

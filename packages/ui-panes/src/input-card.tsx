@@ -10,6 +10,8 @@ import type { ProviderConfigUI } from "@vagus/ui-tokens";
  * the chat pane a more compact card.
  */
 export interface InputCardProps {
+  /** Extension status/widget dock slot (footer row, left of model picker). */
+  dock?: React.ReactNode;
   variant: "welcome" | "chat";
   value: string;
   onChange: (v: string) => void;
@@ -102,6 +104,7 @@ export function InputCard(props: InputCardProps): JSX.Element {
         hasPendingDialog={props.hasPendingDialog}
         onRestoreDialog={props.onRestoreDialog}
         queuedMessages={props.queuedMessages}
+        dock={props.dock}
       />
     </div>
   );

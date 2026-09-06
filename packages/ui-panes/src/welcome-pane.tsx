@@ -1,8 +1,11 @@
+import type { ReactNode } from "react";
 import { useTokens } from "@vagus/ui-tokens";
 import { tr } from "@vagus/ui-shared";
 import { ProjectSelector } from "@vagus/ui-input";
 import type { ProjectOption } from "@vagus/ui-input";
 import { InputCard } from "./input-card.js";
+import { StatusDock } from "./status-dock.js";
+import { ToastHost } from "./toast-host.js";
 import type { InputCardProps } from "./input-card.js";
 
 /**
@@ -15,10 +18,11 @@ export function WelcomePane(props: {
   onSelectProject: (id: string) => void;
   onNewProject: () => void;
   inputCard: Omit<InputCardProps, "variant">;
-  /** Extension status texts to show ABOVE the input bar (ctx.ui.setStatus). */
-  aboveEditorStatuses?: Record<string, string>;
-  /** Extension widgets to show ABOVE the input bar (placement="aboveEditor"). */
-  aboveEditorWidgets?: Record<string, { lines: string[] }>;
+  /** Extension statuses/widgets for the hover dock (ctx.ui.setStatus / setWidget). */
+  dockStatuses?: Record<string, string>;
+  dockWidgets?: Record<string, { lines: string[] }>;
+  /** Transient toast (ctx.ui.notify) — centered over the composer column. */
+  toast?: ReactNode;
   /** Sidebar is collapsed — widen the content's max width to use the space. */
   wide?: boolean;
 }): JSX.Element {
@@ -47,35 +51,9 @@ export function WelcomePane(props: {
           onChange={props.onSelectProject}
           onNewProject={props.onNewProject}
         />
-        <div style={{ marginTop: 10 }}>
-          {(() => {
-            const statusEntries = Object.entries(props.aboveEditorStatuses ?? {}).filter(([, text]) => text.length > 0);
-            const widgetEntries = Object.entries(props.aboveEditorWidgets ?? {}).filter(([, w]) => w.lines.length > 0);
-            if (statusEntries.length === 0 && widgetEntries.length === 0) return null;
-            return (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
-                {statusEntries.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
-                    {statusEntries.map(([key, text]) => (
-                      <span key={key} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 999, background: t.color.surface, border: `1px solid ${t.color.border}`, fontSize: "0.8em", color: t.color.fg }}>
-                        <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: t.color.primary }} />
-                        <span style={{ color: t.color.muted, fontWeight: 600 }}>{key}</span>
-                        <span>{text}</span>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {widgetEntries.map(([key, w]) => (
-                  <div key={key} style={{ display: "flex", flexWrap: "wrap", gap: "4px 10px", fontSize: "0.8em", color: t.color.muted, alignItems: "center", justifyContent: "center" }}>
-                    {w.lines.map((line, i) => (
-                      <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>{line}</span>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-          <InputCard {...props.inputCard} variant="welcome" />
+        <div style={{ marginTop: 10, position: "relative" }}>
+          <ToastHost toast={props.toast} />
+          <InputCard {...props.inputCard} variant="welcome" dock={props.dockStatuses || props.dockWidgets ? <StatusDock statuses={props.dockStatuses ?? {}} widgets={props.dockWidgets ?? {}} /> : undefined} />
         </div>
       </div>
     </div>

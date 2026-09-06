@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Chat-pane auto-scroll behavior:
@@ -32,6 +32,15 @@ export function useAutoscroll(itemsCount: number, activeId: string | undefined) 
   const lastScrollTopRef = useRef(0);
   const lastItemCountRef = useRef(0);
   const [showBottomBtn, setShowBottomBtn] = useState(false);
+  // Bumped by refCallback whenever the scroll container mounts/unmounts (the
+  // chat pane is unmounted while settings/plugins views are open) — the
+  // listener/RO attach effect must re-run on those remounts, not only when
+  // activeId changes.
+  const [chatEpoch, setChatEpoch] = useState(0);
+  const refCallback = useCallback((el: HTMLElement | null) => {
+    scrollRef.current = el;
+    setChatEpoch((n) => n + 1);
+  }, []);
 
   // Re-attach on session change: on first mount the chat <main> isn't
   // rendered yet (welcome screen), so the scroll listener would never attach.
@@ -39,22 +48,33 @@ export function useAutoscroll(itemsCount: number, activeId: string | undefined) 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const onScroll = (): void => {
+    const updateBottomBtn = (): void => {
       const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
       nearBottomRef.current = nearBottom;
       setShowBottomBtn(!nearBottom);
+    };
+    const onScroll = (): void => {
+      updateBottomBtn();
       // Only a USER scroll (not our programmatic scroll) changes the lock.
       if (!programmaticRef.current) {
         const goingUp = el.scrollTop < lastScrollTopRef.current;
         if (goingUp) scrollLockedRef.current = true;      // user scrolled up → lock
-        else if (nearBottom) scrollLockedRef.current = false; // back at bottom → unlock
+        else if (nearBottomRef.current) scrollLockedRef.current = false; // back at bottom → unlock
       }
       lastScrollTopRef.current = el.scrollTop;
     };
     el.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [activeId]);
+    // Virtualization (content-visibility:auto), image loads and streaming
+    // growth all change scrollHeight WITHOUT a user scroll — a ResizeObserver
+    // on the content wrapper keeps the button state honest for those too.
+    const ro = new ResizeObserver(updateBottomBtn);
+    for (const child of el.children) ro.observe(child);
+    updateBottomBtn();
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      ro.disconnect();
+    };
+  }, [activeId, chatEpoch]);
 
   // Session switch: always snap to the very bottom, regardless of the user's
   // scroll position — a different chat is a fresh context. Resetting
@@ -117,35 +137,38 @@ export function useAutoscroll(itemsCount: number, activeId: string | undefined) 
   };
 
   /** Force scroll to bottom + unlock — user-driven (jump button) or session switch.
-   *  Pass `durationMs` for a custom-paced rAF animation (e.g. 750 for a
-   *  leisurely scroll). The target is re-read every frame (scrollHeight may
-   *  grow during the animation as new content arrives), so it lands exactly
-   *  at the true bottom regardless of concurrent content growth. */
+   *  Always uses a rAF animation that re-reads the target every frame:
+   *  content-visibility:auto estimates off-screen heights (120px/entry), so
+   *  jumping straight to scrollHeight lands mid-list while the real layout
+   *  expands below; re-reading until two consecutive stable frames guarantees
+   *  the TRUE bottom (with or without concurrent content growth). */
   const forceScrollToBottom = (smooth = true, durationMs?: number): void => {
     scrollLockedRef.current = false;
-    if (durationMs !== undefined && durationMs > 0) {
-      const el = scrollRef.current;
-      if (!el) return;
-      const start = el.scrollTop;
-      programmaticRef.current = true;
-      const begin = performance.now();
-      const step = (now: number): void => {
-        const t = Math.min(1, (now - begin) / durationMs);
-        // Re-read scrollHeight every frame — content may grow during the
-        // animation (the message is still being rendered), so the original
-        // target would be stale.
-        const target = el.scrollHeight - el.clientHeight;
-        el.scrollTop = start + (target - start) * easeOutCubic(t);
-        if (t < 1) {
-          requestAnimationFrame(step);
-        } else {
-          requestAnimationFrame(() => { programmaticRef.current = false; });
-        }
-      };
-      requestAnimationFrame(step);
-    } else {
-      scrollToAbsolute(smooth);
-    }
+    const el = scrollRef.current;
+    if (!el) return;
+    const dur = durationMs ?? (smooth ? 450 : 0);
+    const start = el.scrollTop;
+    programmaticRef.current = true;
+    const begin = performance.now();
+    let lastTarget = -1;
+    let stableFrames = 0;
+    const step = (now: number): void => {
+      const t = dur > 0 ? Math.min(1, (now - begin) / dur) : 1;
+      const target = el.scrollHeight - el.clientHeight;
+      // Target settled (two identical frames) → snap & finish; keeps growing
+      // (streaming) → keep chasing. Either way we land on the TRUE bottom.
+      if (target === lastTarget) stableFrames++;
+      else stableFrames = 0;
+      lastTarget = target;
+      el.scrollTop = start + (target - start) * easeOutCubic(t);
+      if (t < 1 || stableFrames < 2) {
+        requestAnimationFrame(step);
+      } else {
+        el.scrollTop = target;
+        requestAnimationFrame(() => { programmaticRef.current = false; });
+      }
+    };
+    requestAnimationFrame(step);
   };
 
   /**
@@ -202,6 +225,7 @@ export function useAutoscroll(itemsCount: number, activeId: string | undefined) 
 
   return {
     scrollRef,
+    refCallback,
     nearBottomRef,
     scrollLockedRef,
     lastItemCountRef,

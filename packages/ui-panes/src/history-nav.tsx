@@ -58,8 +58,9 @@ export function HistoryNav({ items, scrollRef, activeId }: {
       style={{
         position: "absolute",
         left: 6,
-        top: "50%",
-        transform: "translateY(-50%)",
+        // Anchored inside a sticky height-0 wrapper (top of the scrollport)
+        // — center the 300px rail in the pane: pane height ≈ 100dvh.
+        top: "calc(50dvh - 150px)",
         width: 24,
         // Exactly 20 ticks × 15px visible at once; older ticks scroll into
         // view via overflowY (scrollbar hidden).

@@ -16,6 +16,9 @@ export function timeAgo(iso: string): string {
   return `${days}d`;
 }
 
+/** Fixed width for the time label (px) — keeps icon columns aligned across rows. */
+export const TIME_W = 34;
+
 /** Extract project name from a cwd path. */
 export function projectName(cwd: string): string {
   const parts = cwd.replace(/\\/g, "/").split("/").filter(Boolean);

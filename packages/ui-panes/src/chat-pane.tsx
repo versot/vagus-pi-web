@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { tr } from "@vagus/ui-shared";
 import { useTokens } from "@vagus/ui-tokens";
@@ -6,6 +7,8 @@ import type { ChatItem, TurnFile } from "@vagus/ui-chat";
 import type { RefObject } from "react";
 import { HistoryNav } from "./history-nav.js";
 import { InputCard } from "./input-card.js";
+import { StatusDock } from "./status-dock.js";
+import { ToastHost } from "./toast-host.js";
 import type { InputCardProps } from "./input-card.js";
 import { UiCard } from "./ui-card.js";
 import type { UiCardItem } from "./ui-card.js";
@@ -30,12 +33,11 @@ export function ChatPane(props: {
   editSubmit: (text: string) => void;
   /** Fork the session from this user message (派生). */
   onFork?: (messageId: number, matchText: string, displayText: string) => void;
-  /** Extension status texts to show ABOVE the input bar (ctx.ui.setStatus). */
-  aboveEditorStatuses?: Record<string, string>;
-  /** Extension widgets to show ABOVE the input bar (placement="aboveEditor"),
-   *  keyed by widget key → lines. Rendered in a fixed-height zone so they stay
-   *  put while the input auto-grows to its max height. */
-  aboveEditorWidgets?: Record<string, { lines: string[] }>;
+  /** Extension statuses/widgets for the hover dock (ctx.ui.setStatus / setWidget). */
+  dockStatuses?: Record<string, string>;
+  dockWidgets?: Record<string, { lines: string[] }>;
+  /** Transient toast (ctx.ui.notify) — centered over the composer column. */
+  toast?: ReactNode;
   inputCard: Omit<InputCardProps, "variant">;
   /** 当前对话名称（中间栏顶栏显示）。 */
   sessionName?: string;
@@ -60,7 +62,7 @@ export function ChatPane(props: {
 }): JSX.Element {
   const t = useTokens();
   const { items, busy, turnStartTs, autoscroll } = props;
-  const { scrollRef, showBottomBtn } = autoscroll;
+  const { scrollRef, refCallback, showBottomBtn } = autoscroll;
   const uiCards = props.uiCards ?? [];
   // Auto-scroll policy: new pending cards (a new question waiting for the
   // user) scroll the NEWEST pending card into view — not the container bottom.
@@ -170,7 +172,9 @@ export function ChatPane(props: {
       let gi = ev.toolCallId ? toolToGroup.get(ev.toolCallId) : undefined;
       if (gi === undefined) gi = ev.turn === undefined ? undefined : turnToGroup.get(ev.turn);
       if (gi === undefined) {
-        // Fallback: latest tool-bearing block, then any work block.
+        // Fallback: latest tool-bearing block, then any work block. This only
+        // catches cards with NO usable anchor (no toolCallId and no turn) —
+        // never the whole history: matched cards above keep their own group.
         gi = lastToolWorkIdx >= 0 ? lastToolWorkIdx : lastWorkIdx >= 0 ? lastWorkIdx : undefined;
       }
       if (gi !== undefined) {
@@ -185,10 +189,14 @@ export function ChatPane(props: {
   }, [groups, uiCards]);
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, position: "relative" }}>
-      {/* 中间栏顶栏：对话名称 + 工作目录 —— 高 54，底部横线与侧栏/第三栏对齐 */}
+    <div
+      ref={refCallback}
+      style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, position: "relative", overflowY: "auto", overflowX: "hidden" }}
+    >
+      {/* 中间栏顶栏：对话名称 + 工作目录 —— sticky 悬浮，滚动条贯穿整个右缘 */}
       <header
         style={{
+          position: "sticky", top: 0, zIndex: 20,
           flexShrink: 0, display: "flex", alignItems: "center", gap: 10,
           height: 54, padding: "0 24px",
           background: t.color.bg, borderBottom: `1px solid ${t.color.border}`,
@@ -212,7 +220,12 @@ export function ChatPane(props: {
           </span>
         ) : null}
       </header>
-      <main ref={scrollRef} style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "28px 0" }}>
+      {/* 时间线导航的 sticky 锚点：height 0，rail 用 absolute 定位在此锚点内，
+          随滚动容器固定在视口中（不再随内容滚走）。 */}
+      <div style={{ position: "sticky", top: 0, height: 0, zIndex: 5 }}>
+        <HistoryNav items={items} scrollRef={scrollRef as RefObject<HTMLElement | null>} activeId={props.activeId} />
+      </div>
+      <div style={{ flex: "1 0 auto", paddingTop: 28 }}>
         <div style={{ maxWidth: props.wide ? 1280 : 1050, margin: "0 auto", padding: "0 28px", display: "flex", flexDirection: "column", gap: 6 }}>
           {/* Lazy-load indicator — shown at the top while an earlier page is fetched. */}
           {props.loadingMore && (
@@ -344,13 +357,20 @@ export function ChatPane(props: {
                         </div>
                       ))
                     : undefined;
-                // The tool that triggered the cards = the LAST tool in the
-                // block (ask_user_question is the final tool call before the
-                // questionnaire waits for the user).
+                // The tool that triggered the cards = each card's OWN toolCallId
+                // (ask_user_question is the final tool call before the
+                // questionnaire waits for the user). Anchor each card to its
+                // exact tool; fall back to the block's last tool only when the
+                // id is unknown (e.g. reloaded sessions without tool trends).
                 let anchorIdx = -1;
                 if (blockCards.length > 0) {
                   for (let k = group.work.length - 1; k >= 0; k--) {
                     if (group.work[k]!.kind === "tool") { anchorIdx = k; break; }
+                  }
+                  const ev = blockCards[0]!.event as { toolCallId?: string };
+                  if (typeof ev.toolCallId === "string" && ev.toolCallId) {
+                    const own = group.work.findIndex((w) => w.kind === "tool" && w.toolCallId === ev.toolCallId);
+                    if (own >= 0) anchorIdx = own;
                   }
                 }
                 out.push(
@@ -400,69 +420,43 @@ export function ChatPane(props: {
           )}
           <div />
         </div>
-      </main>
-      {/* History nav: tick marks for user messages, click to jump. */}
-      <HistoryNav items={items} scrollRef={scrollRef as RefObject<HTMLElement | null>} activeId={props.activeId} />
-      {/* Jump-to-bottom float — appears only when scrolled up. */}
-      {showBottomBtn && (
-        <button
-          onClick={() => autoscroll.forceScrollToBottom()}
-          title={tr("回到底部")}
-          style={{
-            position: "absolute",
-            right: 18,
-            bottom: 96,
-            zIndex: 6,
-            width: 36,
-            height: 36,
-            borderRadius: "50%",
-            background: t.color.surface,
-            border: `1px solid ${t.color.border}`,
-            color: t.color.muted,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
-            transition: "background 0.15s, color 0.15s",
-            fontFamily: "inherit",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = t.color.sidebarHover; e.currentTarget.style.color = t.color.fg; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = t.color.surface; e.currentTarget.style.color = t.color.muted; }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
-        </button>
-      )}
-      <div style={{ padding: "10px 28px 10px", background: t.color.bg, flexShrink: 0 }}>
-        <div style={{ maxWidth: props.wide ? 1180 : 960, margin: "0 auto" }}>
-          {(() => {
-            const statusEntries = Object.entries(props.aboveEditorStatuses ?? {}).filter(([, text]) => text.length > 0);
-            const widgetEntries = Object.entries(props.aboveEditorWidgets ?? {}).filter(([, w]) => w.lines.length > 0);
-            if (statusEntries.length === 0 && widgetEntries.length === 0) return null;
-            return (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
-                {statusEntries.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
-                    {statusEntries.map(([key, text]) => (
-                      <span key={key} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 999, background: t.color.surface, border: `1px solid ${t.color.border}`, fontSize: "0.8em", color: t.color.fg }}>
-                        <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: t.color.primary }} />
-                        <span style={{ color: t.color.muted, fontWeight: 600 }}>{key}</span>
-                        <span>{text}</span>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {widgetEntries.map(([key, w]) => (
-                  <div key={key} style={{ display: "flex", flexWrap: "wrap", gap: "4px 10px", fontSize: "0.8em", color: t.color.muted, alignItems: "center" }}>
-                    {w.lines.map((line, i) => (
-                      <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>{line}</span>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-          <InputCard {...props.inputCard} variant="chat" />
+      </div>
+      {/* Jump-to-bottom float — lives INSIDE the sticky composer wrapper
+          (which is always pinned to the viewport bottom), so it stays visible
+          at all scroll positions. Rendered only when scrolled up. */}
+      <div style={{ position: "sticky", bottom: 0, zIndex: 20, padding: "10px 28px 10px", background: t.color.bg, flexShrink: 0 }}>
+        {showBottomBtn && (
+          <button
+            onClick={() => autoscroll.forceScrollToBottom()}
+            title={tr("回到底部")}
+            style={{
+              position: "absolute",
+              right: 18,
+              top: -48,
+              zIndex: 6,
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              background: t.color.surface,
+              border: `1px solid ${t.color.border}`,
+              color: t.color.muted,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+              transition: "background 0.15s, color 0.15s",
+              fontFamily: "inherit",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = t.color.sidebarHover; e.currentTarget.style.color = t.color.fg; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = t.color.surface; e.currentTarget.style.color = t.color.muted; }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+          </button>
+        )}
+        <div style={{ maxWidth: props.wide ? 1180 : 960, margin: "0 auto", position: "relative" }}>
+          <ToastHost toast={props.toast} />
+          <InputCard {...props.inputCard} variant="chat" dock={props.dockStatuses || props.dockWidgets ? <StatusDock statuses={props.dockStatuses ?? {}} widgets={props.dockWidgets ?? {}} /> : undefined} />
         </div>
       </div>
     </div>

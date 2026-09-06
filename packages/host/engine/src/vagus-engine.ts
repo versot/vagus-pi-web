@@ -305,7 +305,35 @@ export class VagusEngine {
       }
       if (entry.type !== "message" || !entry.message) continue;
       const role = String(entry.message.role);
-      if (role === "toolResult") continue; // already folded into toolCalls
+      if (role === "toolResult") {
+        // pi only persists tool results as toolResult rows (assistant rows
+        // carry no toolCalls) — rebuild a tool trend so reloaded sessions
+        // show the same tool cards/blocks as the live stream, and ui.history
+        // cards can anchor to their triggering tool by the REAL toolCallId.
+        const m = entry.message as { toolCallId?: unknown; toolName?: unknown; isError?: unknown };
+        if (typeof m.toolCallId === "string") {
+          const tid = m.toolCallId;
+          const res = resultsById.get(tid);
+          views.push({
+            role: "tool" as SessionMessage["role"],
+            text: "",
+            toolCalls: [{
+              id: tid,
+              name: typeof m.toolName === "string" ? m.toolName : "tool",
+              args: "",
+              ...(res
+                ? {
+                    result: truncateDisplay(res.result, 20_000),
+                    isError: res.isError,
+                    ...(res.diff !== undefined ? { diff: res.diff } : {}),
+                    ...(res.patch !== undefined ? { patch: res.patch } : {}),
+                  }
+                : {}),
+            }],
+          });
+        }
+        continue; // consumed (not folded into an assistant message)
+      }
 
       const entryTs = new Date(entry.timestamp).getTime();
       if (role === "user") closeTurn(); // a new question ends the previous turn

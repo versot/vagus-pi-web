@@ -206,6 +206,26 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
           if (message.role === "assistant") {
             items.push({ id: base + 100, kind: "assistant", text: message.text });
           }
+          if (message.role === "tool") {
+            // Engine-synthesized tool trend (pi persists only toolResult rows;
+            // see vagus-engine buildMessageViews). Render as a tool block only.
+            for (let c = 0; c < (message.toolCalls ?? []).length; c++) {
+              const call = message.toolCalls![c]!;
+              items.push({
+                id: base + 1 + c,
+                kind: "tool",
+                toolCallId: call.id || `hist-${i}-${c}`,
+                name: call.name,
+                args: call.args,
+                status: call.isError === true ? "failed" : "succeeded",
+                result: call.result,
+                ...(call.diff !== undefined ? { diff: call.diff } : {}),
+                ...(call.patch !== undefined ? { patch: call.patch } : {}),
+                collapsed: true,
+              });
+              turnWorkLast = rebuilt.length + items.length - 1;
+            }
+          }
           if (message.role === "system") {
             // Compaction/branch-summary notes and engine notices.
             items.push({ id: base + 100, kind: "system", text: message.text });
@@ -239,6 +259,24 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         if (message.thinking) {
           items.push({ id: base, kind: "thinking", text: message.thinking, collapsed: true });
           turnWorkLast = earlier.length + items.length - 1;
+        }
+        if (message.role === "tool") {
+          for (let c = 0; c < (message.toolCalls ?? []).length; c++) {
+            const call = message.toolCalls![c]!;
+            items.push({
+              id: base + 1 + c,
+              kind: "tool",
+              toolCallId: call.id || `hist-${i}-${c}`,
+              name: call.name,
+              args: call.args,
+              status: call.isError === true ? "failed" : "succeeded",
+              result: call.result,
+              ...(call.diff !== undefined ? { diff: call.diff } : {}),
+              ...(call.patch !== undefined ? { patch: call.patch } : {}),
+              collapsed: true,
+            });
+            turnWorkLast = earlier.length + items.length - 1;
+          }
         }
         if (message.toolCalls) {
           for (let c = 0; c < message.toolCalls.length; c++) {
