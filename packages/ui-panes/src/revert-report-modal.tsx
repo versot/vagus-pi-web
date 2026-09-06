@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import { useTokens } from "@vagus/ui-tokens";
 import type { RevertResult } from "@vagus/ui-chat";
 
@@ -60,11 +61,11 @@ function FileRow({ result }: { result: { file: string; ok: boolean; error?: stri
         </span>
         {result.ok ? (
           <span style={{ flexShrink: 0, color: t.color.success, fontSize: "0.72em", fontWeight: 600, whiteSpace: "nowrap" }}>
-            ✓ 已回退
+            {tr("✓ 已回退")}
           </span>
         ) : (
           <span style={{ flexShrink: 0, color: t.color.error, fontSize: "0.72em", fontWeight: 600, whiteSpace: "nowrap" }}>
-            ✗ 回退失败
+            {tr("✗ 回退失败")}
           </span>
         )}
       </div>
@@ -168,7 +169,7 @@ export function RevertReportModal({ report, onClose }: { report: RevertReport; o
               <span style={{ color: t.color.fg, fontSize: "1.02em", fontWeight: 700 }}>{title}</span>
               <button
                 onClick={onClose}
-                aria-label="关闭"
+                aria-label={tr("关闭")}
                 style={{
                   marginLeft: "auto", width: 26, height: 26, borderRadius: 7,
                   border: "none", background: "transparent", color: t.color.muted,
@@ -214,7 +215,7 @@ export function RevertReportModal({ report, onClose }: { report: RevertReport; o
             onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1.1)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.filter = "none"; }}
           >
-            关闭
+            {tr("关闭")}
           </button>
         </div>
       </div>

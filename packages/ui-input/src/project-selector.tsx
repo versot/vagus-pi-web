@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import { useTokens } from "@vagus/ui-tokens";
 
 /**
@@ -97,7 +98,7 @@ export function ProjectSelector({ projects, value, onChange, onNewProject }: Pro
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜索项目"
+            placeholder={tr("搜索项目")}
             style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: "0.93em", color: t.color.fg }}
           />
         </div>
@@ -134,7 +135,7 @@ export function ProjectSelector({ projects, value, onChange, onNewProject }: Pro
             }}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: t.color.muted }}><path d="M12 5v14M5 12h14"/></svg>
-            新建项目
+            {tr("新建项目")}
           </button>
         </div>
       </div>

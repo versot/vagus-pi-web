@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import { useTokens } from "@vagus/ui-tokens";
 import { DiffView, groupChatItems, normalizePath } from "@vagus/ui-chat";
 import type { ChatItem } from "@vagus/ui-chat";
@@ -130,7 +131,7 @@ export function DiffTabContent({
               <div style={{ display: "grid", gridTemplateRows: isOpen ? "1fr" : "0fr", transition: "grid-template-rows 0.22s ease" }}>
                 <div style={{ overflow: "hidden", minHeight: 0 }}>
                   <div style={{ padding: "2px 8px 8px", background: t.color.bg }}>
-                    {entry.diff ? <DiffView diff={entry.diff} t={t} /> : <div style={{ color: t.color.muted, fontSize: "0.78em", padding: 6 }}>该轮无 diff</div>}
+                    {entry.diff ? <DiffView diff={entry.diff} t={t} /> : <div style={{ color: t.color.muted, fontSize: "0.78em", padding: 6 }}>{tr("该轮无 diff")}</div>}
                   </div>
                 </div>
               </div>

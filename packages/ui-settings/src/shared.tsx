@@ -1,6 +1,7 @@
 /** Shared settings primitives: controls, layout blocks, formatters. */
 
 import { useEffect, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import { useTheme, useTokens } from "@vagus/ui-tokens";
 
 export const fmt = (n: number): string => {
@@ -415,7 +416,7 @@ export function SizeStepper({ value, onChange, min = 10, max = 20, t }: {
 
     <div style={{ display: "inline-flex", alignItems: "center", border: `1px solid ${t.color.border}`, borderRadius: 8, overflow: "hidden", background: t.color.bg }}>
 
-      <button onClick={() => onChange(Math.max(min, value - 1))} style={btn} aria-label="减小字号">−</button>
+      <button onClick={() => onChange(Math.max(min, value - 1))} style={btn} aria-label={tr("减小字号")}>−</button>
 
       <input
 
@@ -435,7 +436,7 @@ export function SizeStepper({ value, onChange, min = 10, max = 20, t }: {
 
         }}
 
-        aria-label="字号"
+        aria-label={tr("字号")}
 
         style={{
 
@@ -447,7 +448,7 @@ export function SizeStepper({ value, onChange, min = 10, max = 20, t }: {
 
       />
 
-      <button onClick={() => onChange(Math.min(max, value + 1))} style={btn} aria-label="增大字号">+</button>
+      <button onClick={() => onChange(Math.min(max, value + 1))} style={btn} aria-label={tr("增大字号")}>+</button>
 
       <span style={{ paddingRight: 10, fontSize: 12, color: t.color.muted }}>px</span>
 

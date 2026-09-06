@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import { useTokens } from "@vagus/ui-tokens";
 
 /**
@@ -75,7 +76,7 @@ export function RightPanel(props: {
         /* ── 折叠态：浅色窄条 ────────────────────────────────── */
         <div
           onClick={onToggleCollapse}
-          title="展开右侧面板"
+          title={tr("展开右侧面板")}
           style={{
             flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
             cursor: "pointer", userSelect: "none",
@@ -96,7 +97,7 @@ export function RightPanel(props: {
           {/* 左边缘拖拽手柄：调宽度 */}
           <div
             onMouseDown={startDrag}
-            title="拖动调整宽度"
+            title={tr("拖动调整宽度")}
             style={{
               width: 4, flexShrink: 0, cursor: "col-resize",
               background: dragging ? "rgba(99,102,241,0.25)" : "transparent",
@@ -184,7 +185,7 @@ export function RightPanel(props: {
           {/* 右边缘竖栏抓手：始终可见，点击折叠 */}
           <div
             onClick={onToggleCollapse}
-            title="收起右侧面板"
+            title={tr("收起右侧面板")}
             style={{
               width: 14, flexShrink: 0,
               display: "flex", alignItems: "center", justifyContent: "center",

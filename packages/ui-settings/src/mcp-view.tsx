@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import type { useTokens } from "@vagus/ui-tokens";
 import { useTheme } from "@vagus/ui-tokens";
 
@@ -534,10 +535,10 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 19, fontWeight: 650, color: t.color.fg, letterSpacing: "-0.01em" }}>
-              MCP 服务器
+              {tr("MCP 服务器")}
             </div>
             <div style={{ fontSize: 12.5, color: t.color.muted, marginTop: 3, lineHeight: 1.5 }}>
-              连接 Model Context Protocol 服务器，扩展 AI 助手的能力
+              {tr("连接 Model Context Protocol 服务器，扩展 AI 助手的能力")}
             </div>
           </div>
         </div>
@@ -547,7 +548,7 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
 
       {loading && (
         <div style={{ fontSize: 13, color: t.color.muted, padding: 40, textAlign: "center" }}>
-          <span style={{ display: "inline-block", animation: "vagus-pulse 1.4s ease-in-out infinite" }}>加载 MCP 配置…</span>
+          <span style={{ display: "inline-block", animation: "vagus-pulse 1.4s ease-in-out infinite" }}>{tr("加载 MCP 配置…")}</span>
         </div>
       )}
 
@@ -587,7 +588,7 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
                   onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1.1)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.filter = "none"; }}
                 >
-                  <IconPlus /> 新建 MCP 服务器
+                  <IconPlus /> {tr("新建 MCP 服务器")}
                 </button>
               </div>
 
@@ -620,10 +621,10 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
                     <IconPlug />
                   </div>
                   <div style={{ fontSize: 15, fontWeight: 600, color: t.color.fg, marginBottom: 6 }}>
-                    还没有配置 MCP 服务器
+                    {tr("还没有配置 MCP 服务器")}
                   </div>
                   <div style={{ fontSize: 12.5, color: t.color.muted, lineHeight: 1.6 }}>
-                    添加一台服务器，让 AI 助手获得新的能力
+                    {tr("添加一台服务器，让 AI 助手获得新的能力")}
                   </div>
                 </div>
               )}
@@ -701,7 +702,7 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
                           onMouseEnter={(e) => { e.currentTarget.style.borderColor = t.color.primary; e.currentTarget.style.color = t.color.primary; }}
                           onMouseLeave={(e) => { e.currentTarget.style.borderColor = t.color.border; e.currentTarget.style.color = t.color.fg; }}
                         >
-                          <IconEdit /> 编辑
+                          <IconEdit /> {tr("编辑")}
                         </button>
                         <button
                           onClick={() => void removeServer(srv.name)}
@@ -714,11 +715,11 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
                           {isRemoving ? (
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                               <span style={{ width: 12, height: 12, borderRadius: "50%", border: `2px solid ${t.color.error}40`, borderTopColor: t.color.error, animation: "vagus-spin 0.7s linear infinite", display: "inline-block" }} />
-                              移除中…
+                              {tr("移除中…")}
                             </span>
                           ) : (
                             <>
-                              <IconTrash /> 移除
+                              <IconTrash /> {tr("移除")}
                             </>
                           )}
                         </button>
@@ -746,7 +747,7 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
                 onMouseEnter={(e) => { e.currentTarget.style.color = t.color.fg; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = t.color.muted; }}
               >
-                <IconArrowLeft /> 返回列表
+                <IconArrowLeft /> {tr("返回列表")}
               </button>
 
               <div style={{ fontSize: 17, fontWeight: 650, color: t.color.fg, marginBottom: 4, letterSpacing: "-0.01em" }}>
@@ -819,7 +820,7 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
                     }}>
                       {/* 名称 */}
                       <div style={{ ...fieldWrap }}>
-                        <label style={labelStyle}>名称</label>
+                        <label style={labelStyle}>{tr("名称")}</label>
                         <input
                           className="vagus-mcp-input"
                           style={inputStyle}
@@ -831,7 +832,7 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
 
                       {/* 连接方式 */}
                       <div style={{ ...fieldWrap, marginBottom: 20 }}>
-                        <label style={labelStyle}>连接方式</label>
+                        <label style={labelStyle}>{tr("连接方式")}</label>
                         <div style={{ display: "flex", gap: 10 }}>
                           {(["stdio", "http"] as const).map((opt) => {
                             const active = serverType === opt;
@@ -866,7 +867,7 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
                       {serverType === "stdio" ? (
                         <>
                           <div style={{ ...fieldWrap }}>
-                            <label style={labelStyle}>命令</label>
+                            <label style={labelStyle}>{tr("命令")}</label>
                             <input
                               className="vagus-mcp-input"
                               style={{ ...inputStyle, fontFamily: "monospace", fontSize: 12.5 }}
@@ -876,7 +877,7 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
                             />
                           </div>
                           <div style={{ ...fieldWrap }}>
-                            <label style={labelStyle}>参数</label>
+                            <label style={labelStyle}>{tr("参数")}</label>
                             <input
                               className="vagus-mcp-input"
                               style={{ ...inputStyle, fontFamily: "monospace", fontSize: 12.5 }}
@@ -884,7 +885,7 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
                               value={args}
                               onChange={(e) => setArgs(e.target.value)}
                             />
-                            <div style={hintStyle}>多个参数用空格分隔</div>
+                            <div style={hintStyle}>{tr("多个参数用空格分隔")}</div>
                           </div>
                         </>
                       ) : (
@@ -905,7 +906,7 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
 
                       {/* 高级选项 */}
                       <div style={{ ...fieldWrap }}>
-                        <label style={labelStyle}>超时时间（毫秒）</label>
+                        <label style={labelStyle}>{tr("超时时间（毫秒）")}</label>
                         <input
                           className="vagus-mcp-input"
                           style={{ ...inputStyle, maxWidth: 220 }}
@@ -913,12 +914,12 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
                           value={timeoutMs}
                           onChange={(e) => setTimeoutMs(e.target.value)}
                         />
-                        <div style={hintStyle}>默认 30000 ms（30 秒），设为 0 表示不限制</div>
+                        <div style={hintStyle}>{tr("默认 30000 ms（30 秒），设为 0 表示不限制")}</div>
                       </div>
 
                       {serverType === "stdio" && (
                         <div style={{ ...fieldWrap, marginBottom: 0 }}>
-                          <label style={labelStyle}>环境变量（可选）</label>
+                          <label style={labelStyle}>{tr("环境变量（可选）")}</label>
                           <textarea
                             className="vagus-mcp-input"
                             style={{ ...monoStyle, minHeight: 100 }}
@@ -926,7 +927,7 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
                             value={envText}
                             onChange={(e) => setEnvText(e.target.value)}
                           />
-                          <div style={hintStyle}>JSON 格式，留空则不设置</div>
+                          <div style={hintStyle}>{tr("JSON 格式，留空则不设置")}</div>
                         </div>
                       )}
                     </div>
@@ -942,7 +943,7 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
                         <IconSparkle />
                         <span style={{ fontSize: 12.5, fontWeight: 600, color: t.color.fg, letterSpacing: "0.02em" }}>
-                          完整配置
+                          {tr("完整配置")}
                         </span>
                       </div>
                       <div style={{ ...fieldWrap, marginBottom: 0 }}>
@@ -978,7 +979,7 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
                         fontSize: 11, fontWeight: 600, color: t.color.muted,
                         letterSpacing: "0.06em", textTransform: "uppercase",
                       }}>
-                        预生成配置
+                        {tr("预生成配置")}
                       </span>
                       <button
                         onClick={() => void copyPreview()}
@@ -1048,7 +1049,7 @@ export function McpView({ request, t }: McpViewProps): JSX.Element {
                   className="vagus-mcp-btn-press"
                   style={btnSecondary}
                 >
-                  取消
+                  {tr("取消")}
                 </button>
               </div>
             </div>

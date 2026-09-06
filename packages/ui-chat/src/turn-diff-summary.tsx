@@ -1,4 +1,5 @@
 import { memo, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import { useTokens } from "@vagus/ui-tokens";
 import type { TurnFile } from "./messages.js";
 
@@ -122,7 +123,7 @@ export const TurnDiffSummary = memo(function TurnDiffSummary({
             onRevertAll();
           }}
           disabled={reverting}
-          title="撤销本轮的全部更改"
+          title={tr("撤销本轮的全部更改")}
           style={{
             background: "none", border: "none", cursor: reverting ? "wait" : "pointer",
             color: t.color.muted, fontSize: "0.78em", fontWeight: 600,
@@ -152,7 +153,7 @@ export const TurnDiffSummary = memo(function TurnDiffSummary({
               <div
                 key={f.file}
                 onClick={() => onOpenFile(f.file, files)}
-                title="在右侧面板查看本轮的 diff"
+                title={tr("在右侧面板查看本轮的 diff")}
                 style={{
                   display: "flex", alignItems: "center", gap: 8,
                   padding: "6px 12px", background: "transparent", cursor: "pointer",
@@ -175,12 +176,12 @@ export const TurnDiffSummary = memo(function TurnDiffSummary({
                 {/* 审查 — open this turn's files in the right-side panel (clicked one first) */}
                 <button
                   onClick={(e) => { e.stopPropagation(); onOpenFile(f.file, files); }}
-                  title="在右侧面板查看本轮的 diff"
+                  title={tr("在右侧面板查看本轮的 diff")}
                   style={chip}
                   onMouseEnter={(e) => { e.currentTarget.style.background = t.color.sidebarHover; e.currentTarget.style.color = t.color.fg; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = t.color.surface; e.currentTarget.style.color = t.color.muted; }}
                 >
-                  审查
+                  {tr("审查")}
                 </button>
               </div>
             );

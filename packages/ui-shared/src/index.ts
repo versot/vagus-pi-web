@@ -4,4 +4,7 @@ export { codePaletteFor, highlightLine, LIGHT_PALETTE, DARK_PALETTE } from "./co
 export type { CodeThemeName, CodePalette, CodeToken } from "./code-highlight.js";
 export { JsonRpcClient, ErrorCodes } from "./protocol-client.js";
 export type { JsonRpcClientOptions, Transport } from "./protocol-client.js";
+export { t, tr, getLocale, setLocale, loadLocalePreference, registerLocale } from "./i18n.js";
+export type { Locale } from "./i18n.js";
+export { enDict } from "./i18n-en.js";
 export type { DomainEvent } from "@vagus/protocol";

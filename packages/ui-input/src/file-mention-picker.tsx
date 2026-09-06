@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import { useTokens } from "@vagus/ui-tokens";
 
 /**
@@ -67,16 +68,16 @@ export function FileMentionPicker({ cwd, listFiles, onPick }: FileMentionPickerP
             value={query}
             onChange={(e) => { setQuery(e.target.value); setActive(0); }}
             onKeyDown={onKeyDown}
-            placeholder="搜索工作区文件…"
+            placeholder={tr("搜索工作区文件…")}
             style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: "0.96em", color: t.color.fg, fontFamily: "inherit" }}
           />
           <span style={{ fontSize: "0.79em", color: t.color.muted }}>{cwd.split(/[\\/]/).filter(Boolean).pop() ?? cwd}</span>
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: 6, minHeight: 200 }}>
           {loading ? (
-            <div style={{ padding: "28px 0", textAlign: "center", color: t.color.muted, fontSize: "0.93em" }}>加载中…</div>
+            <div style={{ padding: "28px 0", textAlign: "center", color: t.color.muted, fontSize: "0.93em" }}>{tr("加载中…")}</div>
           ) : filtered.length === 0 ? (
-            <div style={{ padding: "28px 0", textAlign: "center", color: t.color.muted, fontSize: "0.93em" }}>（没有匹配的文件）</div>
+            <div style={{ padding: "28px 0", textAlign: "center", color: t.color.muted, fontSize: "0.93em" }}>{tr("（没有匹配的文件）")}</div>
           ) : (
             filtered.map((f, i) => (
               <div

@@ -1,4 +1,5 @@
 import { useTokens } from "@vagus/ui-tokens";
+import { tr } from "@vagus/ui-shared";
 import type { RightTab } from "./right-panel.js";
 
 /**
@@ -21,7 +22,7 @@ export function WidgetPanelContent({ widgets }: { widgets: Record<string, { line
   const t = useTokens();
   const entries = Object.entries(widgets).filter(([, w]) => w.lines.length > 0);
   if (entries.length === 0) {
-    return <div style={{ padding: "16px 18px", fontSize: "0.86em", color: t.color.muted }}>（没有活动的面板）</div>;
+    return <div style={{ padding: "16px 18px", fontSize: "0.86em", color: t.color.muted }}>{tr("（没有活动的面板）")}</div>;
   }
   return (
     <div style={{ padding: "10px 14px", display: "flex", flexDirection: "column", gap: 10, fontFamily: t.font.mono, fontSize: "0.82em", lineHeight: 1.6, color: t.color.fg }}>

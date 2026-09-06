@@ -1086,7 +1086,6 @@ export class VagusEngine {
       if (session.sessionManager?.getCwd() === cwd) {
         // Dispose must never block (or kill) the archive/delete flow — any
         // error here is non-fatal, the session is going away regardless.
-        process.stderr.write(`vagus: disposing session ${sid} (cwd=${cwd})\n`);
         try {
           session.dispose();
         } catch (err) {
@@ -1158,10 +1157,9 @@ export class VagusEngine {
     }
   }
 
-  /** Restores an archived project: moves its session files back under `sessions/`. */
   /** Restores an archived project by its encoded dir name (unique identity). */
   async unarchiveProjectByDir(dirKey: string): Promise<void> {
-    if (!dirKey || dirKey.includes("/") || dirKey.includes("\\") || dirKey.includes("..")) return;
+    if (!VagusEngine.isSafeDirKey(dirKey)) return;
     const agentDir = this.agentDirPath();
     const src = join(agentDir, "archived", dirKey);
     if (!existsSync(src)) return;
@@ -1209,11 +1207,9 @@ export class VagusEngine {
   /** Permanently deletes an archived project dir by its encoded dir name.
    *  dirKey (not cwd) is the identity — cwds can repeat across archive dirs. */
   async deleteArchivedProjectByDir(dirKey: string): Promise<void> {
-    // Sanitize: dirKey must be a plain directory name (no traversal).
-    if (!dirKey || dirKey.includes("/") || dirKey.includes("\\") || dirKey.includes("..")) return;
+    if (!VagusEngine.isSafeDirKey(dirKey)) return;
     const agentDir = this.agentDirPath();
     const dir = join(agentDir, "archived", dirKey);
-    process.stderr.write(`vagus: deleteArchivedProjectByDir dirKey=${dirKey}\n`);
     // Close any open session whose file lives inside this archived dir.
     const prefix = dir + sep;
     for (const [sid, session] of this.sessions) {
@@ -1226,20 +1222,20 @@ export class VagusEngine {
         void this.options.bus.emit("session.closed", { type: "session.closed", sessionId: sid }).catch(() => {});
       }
     }
-    process.stderr.write(`vagus: sessions closed, removing dir...\n`);
     this.rmDirSafe(dir);
-    process.stderr.write(`vagus: archived dir removed OK\n`);
   }
 
   /** Permanently deletes an archived project's session dir (JSONL). */
   async deleteArchivedProject(cwd: string): Promise<void> {
     const agentDir = this.agentDirPath();
     const dir = join(agentDir, "archived", this.encodeCwd(cwd));
-    process.stderr.write(`vagus: deleteArchivedProject cwd=${cwd} dir=${dir}\n`);
     this.closeSessionForCwd(cwd);
-    process.stderr.write(`vagus: sessions closed, removing dir...\n`);
     this.rmDirSafe(dir);
-    process.stderr.write(`vagus: archived dir removed OK\n`);
+  }
+
+  /** Safe archive-dir name: a plain single path segment, never traversal. */
+  private static isSafeDirKey(dirKey: string): boolean {
+    return dirKey.length > 0 && dirKey !== "." && dirKey !== ".." && !dirKey.includes("/") && !dirKey.includes("\\") && !dirKey.includes("..");
   }
 
   /**
@@ -1417,10 +1413,20 @@ export class VagusEngine {
     if (!sourceFile) throw new Error("source session has no file path");
     if (!existsSync(sourceFile)) throw new Error(`source session file not found: ${sourceFile}`);
 
-    // Read all entries from the source file
+    // Read all entries from the source file. Skip unparseable lines — the
+    // source may be actively written (torn trailing line) and one bad line
+    // must not kill the whole fork.
     const raw = readFileSync(sourceFile, "utf8");
-    const lines = raw.split("\n").filter((l) => l.trim().length > 0);
-    const entries = lines.map((l) => JSON.parse(l));
+    const entries = raw
+      .split("\n")
+      .filter((l) => l.trim().length > 0)
+      .flatMap((l) => {
+        try {
+          return [JSON.parse(l) as Record<string, unknown>];
+        } catch {
+          return [];
+        }
+      });
     const header = entries[0];
     if (!header || header.type !== "session") throw new Error("source session has no header");
 
@@ -1431,8 +1437,9 @@ export class VagusEngine {
     // Include context up to (but NOT including) the clicked user message — pi's
     // native fork semantics: the selected message becomes the first new prompt,
     // pre-filled in the editor. Everything before it carries over as context.
-    let endIdx = targetIdx - 1;
-    if (endIdx < 1) endIdx = 1; // at minimum include the header
+    // For the FIRST user message this is 0 — a header-only new session (the
+    // loop below then copies nothing; fork at message #1 = empty context).
+    const endIdx = targetIdx - 1;
 
     // Build new session file: header + entries before the target
     const cwd = session.sessionManager.getCwd() || this.options.cwd;

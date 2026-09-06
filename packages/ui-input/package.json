@@ -20,6 +20,7 @@
     "build": "tsc -b"
   },
   "dependencies": {
+    "@vagus/ui-shared": "workspace:*",
     "@vagus/ui-tokens": "workspace:*",
     "react": "^18.3.1"
   },

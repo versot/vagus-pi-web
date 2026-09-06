@@ -1,4 +1,5 @@
 import { useTokens } from "@vagus/ui-tokens";
+import { tr } from "@vagus/ui-shared";
 
 export interface ConfirmState {
   title: string;
@@ -39,7 +40,7 @@ export function ConfirmDialog({ state, onClose }: { state: ConfirmState; onClose
               height: 34, padding: "0 16px", borderRadius: 9, border: `1px solid ${t.color.border}`,
               background: "transparent", color: t.color.fg, fontSize: "0.9em", cursor: "pointer", fontFamily: "inherit",
             }}
-          >取消</button>
+          >{tr("取消")}</button>
           <button
             onClick={() => { const fn = state.onConfirm; onClose(); fn(); }}
             style={{

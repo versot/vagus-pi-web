@@ -1,8 +1,15 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { runDaemon } from "./commands/daemon.js";
 import { runWeb } from "./commands/web.js";
+
+// Dev vs production ports: the repo dev daemon (source via tsx) defaults to
+// 19708 so it never fights a running npx-installed daemon (19707). Explicit
+// VAGUS_WS_PORT always wins.
+if (!process.env.VAGUS_WS_PORT && existsSync(new URL("./commands/daemon.ts", import.meta.url))) {
+  process.env.VAGUS_WS_PORT = "19708";
+}
 
 /**
  * pi-web CLI entry (`pi-web`).

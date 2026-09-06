@@ -5,6 +5,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { JsonRpcServer } from "../src/server.js";
 import { WsServerHost } from "../src/websocket-server.js";
 
+// The native WebSocket honors HTTP(S)_PROXY env vars (Node 24+) — a dev
+// machine with a proxy configured would otherwise route localhost test
+// connections through it. Strip before any connection is made.
+for (const k of ["HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy", "NO_PROXY", "no_proxy"]) {
+  delete process.env[k];
+}
+
 /**
  * M4 integration: the daemon serves the built GUI over HTTP *and* the
  * JSON-RPC event stream over WebSocket on the same port (one process, one

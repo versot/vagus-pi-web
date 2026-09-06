@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import type { useTokens } from "@vagus/ui-tokens";
 import { useTheme } from "@vagus/ui-tokens";
 
@@ -110,9 +111,9 @@ export function SkillsView({ request, t }: SkillsViewProps): JSX.Element {
     <div>
       {/* Heading */}
       <div style={{ marginBottom: 22 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", color: t.color.fg }}>技能</h1>
+        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", color: t.color.fg }}>{tr("技能")}</h1>
         <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 8, fontSize: 12.5, color: t.color.muted }}>
-          <span>全局可复用的技能包，按名称去重</span>
+          <span>{tr("全局可复用的技能包，按名称去重")}</span>
           {!loading && skills.length > 0 && (
             <>
               <span aria-hidden="true" style={{ color: t.color.border }}>·</span>
@@ -134,15 +135,15 @@ export function SkillsView({ request, t }: SkillsViewProps): JSX.Element {
       {loading && (
         <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "40px 0", color: t.color.muted, fontSize: 13 }}>
           <span style={{ width: 13, height: 13, flexShrink: 0, border: "2px solid currentColor", borderRightColor: "transparent", borderRadius: "50%", animation: "sk-spin 700ms linear infinite" }} />
-          正在读取技能…
+          {tr("正在读取技能…")}
         </div>
       )}
 
       {!loading && skills.length === 0 && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 200, color: t.color.muted }}>
           <div style={{ width: 42, height: 42, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", color: t.color.muted, background: isDark ? "rgba(15,17,23,0.5)" : "rgba(245,246,250,0.9)", marginBottom: 12 }}>{ICONS.box}</div>
-          <div style={{ color: t.color.fg, fontSize: 14, fontWeight: 650 }}>暂无全局技能</div>
-          <div style={{ marginTop: 5, fontSize: 12.5 }}>在 ~/.pi/agent/skills/ 或 ~/.agents/skills/ 添加 SKILL.md。</div>
+          <div style={{ color: t.color.fg, fontSize: 14, fontWeight: 650 }}>{tr("暂无全局技能")}</div>
+          <div style={{ marginTop: 5, fontSize: 12.5 }}>{tr("在 ~/.pi/agent/skills/ 或 ~/.agents/skills/ 添加 SKILL.md。")}</div>
         </div>
       )}
 

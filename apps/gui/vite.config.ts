@@ -20,6 +20,14 @@ export default defineConfig({
           if (id.includes("node_modules/react") || id.includes("node_modules/scheduler")) {
             return "vendor";
           }
+          // i18n module lives in ui-shared and is used by the first paint —
+          // keep it OUT of the lazy settings chunk.
+          if (id.includes("@vagus/ui-shared") || id.includes("/ui-shared/")) {
+            return "vendor";
+          }
+          if (id.includes("@vagus/ui-tokens") || id.includes("/ui-tokens/")) {
+            return "vendor";
+          }
           if (id.includes("@vagus/ui-settings") || id.includes("/ui-settings/")) {
             return "settings";
           }

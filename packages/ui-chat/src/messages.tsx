@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useTheme, useTokens } from "@vagus/ui-tokens";
@@ -414,7 +415,7 @@ function UserMessage({ item, onCopy, onEditSubmit, onFork }: { item: Extract<Cha
                 height: 30, padding: "0 12px", borderRadius: 8, border: `1px solid ${t.color.border}`,
                 background: "transparent", color: t.color.muted, fontSize: "0.86em", cursor: "pointer", fontFamily: "inherit",
               }}
-            >取消</button>
+            >{tr("取消")}</button>
             <button
               onClick={() => { if (draft.trim()) onEditSubmit?.(draft.trim()); setEditing(false); }}
               style={{
@@ -422,7 +423,7 @@ function UserMessage({ item, onCopy, onEditSubmit, onFork }: { item: Extract<Cha
                 background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff",
                 fontSize: "0.86em", fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
               }}
-            >发送</button>
+            >{tr("发送")}</button>
           </div>
         </>
       ) : (
@@ -441,7 +442,7 @@ function UserMessage({ item, onCopy, onEditSubmit, onFork }: { item: Extract<Cha
                     background: t.color.bg, cursor: "zoom-in",
                   }}
                   onClick={() => setPreview(img.dataUrl)}
-                  title="点击查看大图"
+                  title={tr("点击查看大图")}
                 />
               ))}
             </div>
@@ -479,7 +480,7 @@ function UserMessage({ item, onCopy, onEditSubmit, onFork }: { item: Extract<Cha
               {onFork && (
                 <button
                   onClick={() => onFork(item.id, item.text, parsed.copyText)}
-                  title="从此处派生新对话（创建新会话保留到此为止的上下文）"
+                  title={tr("从此处派生新对话（创建新会话保留到此为止的上下文）")}
                   style={{
                     ...toolBtn(t.color.muted),
                     opacity: 0.5, transition: "opacity 0.15s, color 0.15s",
@@ -508,7 +509,7 @@ function UserMessage({ item, onCopy, onEditSubmit, onFork }: { item: Extract<Cha
                 </button>
               )}
               {onEditSubmit && (
-                <button onClick={() => { setDraft(parsed.copyText); setEditing(true); }} title="编辑" style={toolBtn(t.color.muted)}>
+                <button onClick={() => { setDraft(parsed.copyText); setEditing(true); }} title={tr("编辑")} style={toolBtn(t.color.muted)}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 20h4l10-10a2.83 2.83 0 0 0-4-4L4 16v4z"/></svg>
                 </button>
               )}
@@ -632,7 +633,7 @@ function WorkBlockInner({ work, onToggleItem, live, startMs, attached, attachedA
         }}
       >
         <span style={{ fontSize: "0.71em", color: t.color.muted, flexShrink: 0, transition: "transform 0.15s", transform: open ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
-        <span style={{ color: "#6366f1", fontWeight: 600 }}>工作内容</span>
+        <span style={{ color: "#6366f1", fontWeight: 600 }}>{tr("工作内容")}</span>
         <span style={{ color: t.color.muted }}>
           {counts}
           {counts !== "" && hasDur && " · "}
@@ -696,7 +697,7 @@ function ThinkingCard({ item, onToggle }: { item: Extract<ChatItem, { kind: "thi
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="1.8" style={{ flexShrink: 0 }}>
           <path d="M12 4.5a2.5 2.5 0 0 0-4.96-.46 2.5 2.5 0 0 0-1.98 3 2.5 2.5 0 0 0-1.32 4.24 3 3 0 0 0 .34 5.58 2.5 2.5 0 0 0 2.96 3.08A2.5 2.5 0 0 0 12 19.5a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 12 4.5z"/>
         </svg>
-        <span style={{ color: "#6366f1", fontSize: "0.88em", fontWeight: 600, letterSpacing: "0.02em" }}>思考</span>
+        <span style={{ color: "#6366f1", fontSize: "0.88em", fontWeight: 600, letterSpacing: "0.02em" }}>{tr("思考")}</span>
         <span style={{ marginLeft: "auto", color: t.color.muted, fontSize: "0.79em" }}>{item.text.length} chars</span>
       </div>
       {!collapsed && (
@@ -986,7 +987,7 @@ export function DiffView({ diff, t, maxHeight, full }: { diff: string; t: Return
         return <div key={`s${si}`}>{seg.lines.map((l, li) => renderLine(l, li, `s${si}-c`))}</div>;
       })}
       {segments.length === 0 && (
-        <div style={{ padding: "8px 10px", color: pal.numFg, fontSize: "0.85em", fontFamily: "system-ui, sans-serif" }}>（无 diff）</div>
+        <div style={{ padding: "8px 10px", color: pal.numFg, fontSize: "0.85em", fontFamily: "system-ui, sans-serif" }}>{tr("（无 diff）")}</div>
       )}
       </div>
     </div>

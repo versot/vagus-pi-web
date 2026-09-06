@@ -1,5 +1,4 @@
-import { spawn, type ChildProcess } from "node:child_process";
-import { execSync } from "node:child_process";
+import { execSync, spawn, type ChildProcess } from "node:child_process";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -60,6 +59,14 @@ function daemonEntryPath(): string {
   return existsSync(source) ? source : `${base}.js`;
 }
 
+/**
+ * Dev vs production default ports — handled centrally in bin.ts via
+ * VAGUS_WS_PORT. Web (source) imports this to build the browser URL.
+ */
+export function defaultWsPort(): number {
+  return daemonEntryPath().endsWith(".ts") ? 19708 : 19707;
+}
+
 export interface SpawnDaemonOptions {
   /** Extra environment variables merged over `process.env`. */
   env?: NodeJS.ProcessEnv;
@@ -87,7 +94,8 @@ export function spawnDaemon(options: SpawnDaemonOptions = {}): ChildProcess {
       injected.HTTPS_PROXY = sysProxy;
       injected.HTTP_PROXY = sysProxy;
       injected.NO_PROXY = process.env.NO_PROXY ?? "localhost,127.0.0.1";
-      process.stderr.write(`vagus: following system proxy → ${sysProxy}\n`);
+      const redacted = sysProxy.replace(/\/\/([^@/]*)@/, "//***@");
+      process.stderr.write(`vagus: following system proxy → ${redacted}\n`);
     } else {
       process.stderr.write(`vagus: no system proxy detected (direct connections)\n`);
     }

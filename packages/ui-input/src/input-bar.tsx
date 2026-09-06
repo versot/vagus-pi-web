@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import { useTokens } from "@vagus/ui-tokens";
 import type { ProviderConfigUI } from "@vagus/ui-tokens";
 import { commandColor } from "./command-picker.js";
@@ -270,7 +271,7 @@ export function InputBar({ value, onChange, onSubmit, usage, providers, onSwitch
           {attachments.map((a, i) => (
             <div key={i} style={{ position: "relative" }}>
               <img src={a.dataUrl} alt={a.name ?? ""} style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 8, border: `1px solid ${t.color.border}` }} />
-              <button onClick={() => onRemoveAttachment?.(i)} title="移除" style={{ position: "absolute", top: -5, right: -5, width: 16, height: 16, borderRadius: "50%", border: "none", background: "#E5484D", color: "#fff", fontSize: "0.71em", lineHeight: 1, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+              <button onClick={() => onRemoveAttachment?.(i)} title={tr("移除")} style={{ position: "absolute", top: -5, right: -5, width: 16, height: 16, borderRadius: "50%", border: "none", background: "#E5484D", color: "#fff", fontSize: "0.71em", lineHeight: 1, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
             </div>
           ))}
           {fileAttachments.map((f, i) => (
@@ -387,7 +388,7 @@ export function InputBar({ value, onChange, onSubmit, usage, providers, onSwitch
 
         {/* + menu */}
         <div style={{ position: "relative" }}>
-          <button ref={addBtnRef} title="添加上下文" style={iconBtn} onClick={() => { setMenuOpen((o) => !o); setModelOpen(false); }}>
+          <button ref={addBtnRef} title={tr("添加上下文")} style={iconBtn} onClick={() => { setMenuOpen((o) => !o); setModelOpen(false); }}>
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
           </button>
           {menuOpen && (
@@ -492,7 +493,7 @@ export function InputBar({ value, onChange, onSubmit, usage, providers, onSwitch
             }}>
               {/* capacity row */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ color: t.color.muted }}>上下文容量</span>
+                <span style={{ color: t.color.muted }}>{tr("上下文容量")}</span>
                 <span style={{ fontVariantNumeric: "tabular-nums" }}>
                   {usage
                     ? contextKnown
@@ -507,7 +508,7 @@ export function InputBar({ value, onChange, onSubmit, usage, providers, onSwitch
               </div>
               {/* cache hit rate (pi-compatible) */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ color: t.color.muted }}>缓存命中率</span>
+                <span style={{ color: t.color.muted }}>{tr("缓存命中率")}</span>
                 <span style={{ fontVariantNumeric: "tabular-nums" }}>{cacheHitRate !== undefined ? `${cacheHitRate.toFixed(1)}%` : "—"}</span>
               </div>
             </div>
@@ -517,13 +518,13 @@ export function InputBar({ value, onChange, onSubmit, usage, providers, onSwitch
 
         {/* model picker (grouped by provider) */}
         <div ref={modelRef} style={{ position: "relative" }}>
-          <button style={chip} onClick={() => { setModelOpen((o) => !o); setMenuOpen(false); }} title="切换模型">
+          <button style={chip} onClick={() => { setModelOpen((o) => !o); setMenuOpen(false); }} title={tr("切换模型")}>
             {usage?.model?.split("/").pop() ?? selectedModel ?? "选择模型"}
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           {modelOpen && (
             <div style={{ ...menuPanel, left: "auto", right: 0, width: 250, maxHeight: 320, overflowY: "auto" }} onMouseDown={(e) => e.stopPropagation()}>
-              {providers.length === 0 && <div style={{ padding: "10px 12px", fontSize: "0.86em", color: t.color.muted }}>暂无已配置模型</div>}
+              {providers.length === 0 && <div style={{ padding: "10px 12px", fontSize: "0.86em", color: t.color.muted }}>{tr("暂无已配置模型")}</div>}
               {providers.map((p) => (
                 <div key={p.id}>
                   <div style={{ padding: "8px 10px 4px", fontSize: "0.75em", fontWeight: 600, letterSpacing: 0.4, textTransform: "uppercase", color: t.color.muted }}>{p.id}</div>

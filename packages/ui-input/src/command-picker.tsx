@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import { useTokens } from "@vagus/ui-tokens";
 import type { TokensReadonly } from "@vagus/ui-tokens";
 
@@ -78,14 +79,14 @@ export function CommandPicker({ commands, onPick }: CommandPickerProps): JSX.Ele
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Escape") onPick(null); }}
-            placeholder="输入 / 命令…"
+            placeholder={tr("输入 / 命令…")}
             style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: "0.96em", color: t.color.fg, fontFamily: "inherit" }}
           />
           <span style={{ fontSize: "0.72em", color: t.color.muted, flexShrink: 0 }}>{filtered.length} 项</span>
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: 6, minHeight: 160 }}>
           {filtered.length === 0 ? (
-            <div style={{ padding: "16px 10px", color: t.color.muted, fontSize: "0.86em" }}>（没有匹配的命令）</div>
+            <div style={{ padding: "16px 10px", color: t.color.muted, fontSize: "0.86em" }}>{tr("（没有匹配的命令）")}</div>
           ) : (
             sections.flatMap((type) => {
               const group = filtered.filter((c) => c.type === type);

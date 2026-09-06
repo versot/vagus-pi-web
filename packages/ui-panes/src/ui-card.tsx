@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import { useTokens } from "@vagus/ui-tokens";
 
 /** The `ui.request` event payload (extension UI bridge, pi RPC-style). */
@@ -122,7 +123,7 @@ export function UiCard({ card, onRespond }: { card: UiCardItem; onRespond: (resu
             >{opt}</button>
           ))}
           {event.options?.length === 0 && (
-            <div style={{ fontSize: "0.86em", color: t.color.muted, padding: "12px 4px" }}>（没有可用选项）</div>
+            <div style={{ fontSize: "0.86em", color: t.color.muted, padding: "12px 4px" }}>{tr("（没有可用选项）")}</div>
           )}
         </div>
       ) : event.method === "input" ? (
@@ -146,16 +147,16 @@ export function UiCard({ card, onRespond }: { card: UiCardItem; onRespond: (resu
           content (input keeps its own row; buttons never stack vertically). */}
       {!answered && (
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 6 }}>
-          <button onClick={() => onRespond({ cancelled: true })} style={{ ...btnBase, border: `1px solid ${t.color.border}`, background: "transparent", color: t.color.fg }}>取消</button>
+          <button onClick={() => onRespond({ cancelled: true })} style={{ ...btnBase, border: `1px solid ${t.color.border}`, background: "transparent", color: t.color.fg }}>{tr("取消")}</button>
           {event.method === "confirm" && (
-            <button onClick={() => onRespond({ confirmed: true })} style={{ ...btnBase, border: "none", background: t.color.primary, color: "#fff", fontWeight: 600 }}>确认</button>
+            <button onClick={() => onRespond({ confirmed: true })} style={{ ...btnBase, border: "none", background: t.color.primary, color: "#fff", fontWeight: 600 }}>{tr("确认")}</button>
           )}
           {event.method === "input" && (
             <button
               onClick={() => onRespond({ value: inputValue })}
               disabled={inputValue.trim().length === 0}
               style={{ ...btnBase, border: "none", background: t.color.primary, color: "#fff", fontWeight: 600, opacity: inputValue.trim().length === 0 ? 0.4 : 1, cursor: inputValue.trim().length === 0 ? "not-allowed" : "pointer" }}
-            >确定</button>
+            >{tr("确定")}</button>
           )}
         </div>
       )}

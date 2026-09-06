@@ -1,4 +1,5 @@
 import { useTheme } from "@vagus/ui-tokens";
+import { tr } from "@vagus/ui-shared";
 import type { useTokens } from "@vagus/ui-tokens";
 import type { ProviderConfigUI } from "@vagus/ui-tokens";
 import { IconBox, IconPlus } from "./icons.js";
@@ -16,14 +17,14 @@ export function ProviderSidebar({ providers, selectedId, adding, onSelect, onAdd
   return (
     <div style={{ width: 220, flexShrink: 0, borderRight: `1px solid ${t.color.border}`, padding: 10, background: mdTheme === "light" ? "#ffffff" : t.color.surface }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 10px 6px" }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: t.color.muted, letterSpacing: "0.04em" }}>自定义供应商</span>
-        <button onClick={onAdd} title="添加供应商"
+        <span style={{ fontSize: 11, fontWeight: 600, color: t.color.muted, letterSpacing: "0.04em" }}>{tr("自定义供应商")}</span>
+        <button onClick={onAdd} title={tr("添加供应商")}
           onMouseEnter={(e) => e.currentTarget.style.color = t.color.fg}
           onMouseLeave={(e) => e.currentTarget.style.color = t.color.muted}
           style={{ background: "transparent", border: "none", color: t.color.muted, cursor: "pointer", display: "flex", padding: 2, transition: "color 0.15s" }}><IconPlus size={14} /></button>
       </div>
       {providers.length === 0 && !adding && (
-        <div style={{ fontSize: 12, color: t.color.muted, padding: "8px 10px" }}>暂无供应商</div>
+        <div style={{ fontSize: 12, color: t.color.muted, padding: "8px 10px" }}>{tr("暂无供应商")}</div>
       )}
       {providers.map((p) => {
         const isActive = selectedId === p.id && !adding;

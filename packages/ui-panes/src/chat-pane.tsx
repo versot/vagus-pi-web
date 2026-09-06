@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { tr } from "@vagus/ui-shared";
 import { useTokens } from "@vagus/ui-tokens";
 import { ChatMessage, WorkBlock, groupChatItems, dedupeThinking, TurnDiffSummary } from "@vagus/ui-chat";
 import type { ChatItem, TurnFile } from "@vagus/ui-chat";
@@ -217,14 +218,14 @@ export function ChatPane(props: {
           {props.loadingMore && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", padding: "10px 0", color: t.color.muted, fontSize: "0.82em" }}>
               <span style={{ width: 12, height: 12, borderRadius: "50%", border: `2px solid ${t.color.border}`, borderTopColor: t.color.primary, animation: "vagus-spin 0.8s linear infinite", display: "inline-block" }} />
-              加载更早消息…
+              {tr("加载更早消息…")}
             </div>
           )}
           {items.length === 0 && (
             props.showLoading ? (
-              <div style={{ color: t.color.muted, fontSize: "1em", textAlign: "center", marginTop: 40 }}>加载会话…</div>
+              <div style={{ color: t.color.muted, fontSize: "1em", textAlign: "center", marginTop: 40 }}>{tr("加载会话…")}</div>
             ) : !props.sessionLoading ? (
-              <div style={{ color: t.color.muted, fontSize: "1em", textAlign: "center", marginTop: 40 }}>已连接 · 输入消息开始新会话</div>
+              <div style={{ color: t.color.muted, fontSize: "1em", textAlign: "center", marginTop: 40 }}>{tr("已连接 · 输入消息开始新会话")}</div>
             ) : null
           )}
           {(() => {
@@ -394,7 +395,7 @@ export function ChatPane(props: {
                 animation: "vagus-pulse 1.2s ease-in-out infinite",
                 display: "inline-block",
               }} />
-              等待响应…
+              {tr("等待响应…")}
             </div>
           )}
           <div />
@@ -406,7 +407,7 @@ export function ChatPane(props: {
       {showBottomBtn && (
         <button
           onClick={() => autoscroll.forceScrollToBottom()}
-          title="回到底部"
+          title={tr("回到底部")}
           style={{
             position: "absolute",
             right: 18,

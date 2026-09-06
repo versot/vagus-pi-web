@@ -1,4 +1,5 @@
 import { useTokens } from "@vagus/ui-tokens";
+import { tr } from "@vagus/ui-shared";
 
 /** Center max-width shared with other chat cards. */
 const MAX_W = 720;
@@ -58,7 +59,7 @@ export function CompactionNote({ text }: { text: string }): JSX.Element {
             lineHeight: 1.5,
           }}
         >
-          <span style={{ color: BRAND_A, fontWeight: 600 }}>前文已摘要</span>
+          <span style={{ color: BRAND_A, fontWeight: 600 }}>{tr("前文已摘要")}</span>
           {match ? <span style={{ opacity: 0.75 }}> · 剩余 {match[1]}K 上下文</span> : null}
         </span>
       </div>

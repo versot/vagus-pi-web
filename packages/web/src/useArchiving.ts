@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import type { JsonRpcClient } from "@vagus/ui-shared";
 import type { SessionHistoryItem } from "@vagus/ui-tokens";
 
@@ -68,16 +69,18 @@ export function useArchiving(
   const deleteProject = useCallback(async (dirKey: string, sessions: SessionHistoryItem[], activePath: string | undefined) => {
     if (!client) return;
     confirm(
-      "彻底删除项目",
-      `将永久删除该归档会话文件，不可恢复。`,
-      "彻底删除",
+      tr("彻底删除项目"),
+      tr("将永久删除该归档会话文件，不可恢复。"),
+      tr("彻底删除"),
       () => {
         void (async () => {
           try {
             await client.request("project.delete", { dirKey });
             setArchivedProjects((prev) => prev.filter((p) => p.dirKey !== dirKey));
-            // If the deleted project hosted the active session, clear it.
-            if (activePath && sessions.find((s) => s.path === activePath)) {
+            // Only clear the active session if it actually belonged to the
+            // deleted archived project (cwd from the archive list).
+            const removed = archivedProjects.find((p) => p.dirKey === dirKey);
+            if (activePath && removed && sessions.find((s) => s.path === activePath)?.cwd === removed.cwd) {
               onSessionRemoved(activePath);
             }
             void refreshHistory(client);
@@ -85,13 +88,13 @@ export function useArchiving(
         })();
       },
     );
-  }, [client, confirm, onSessionRemoved, refreshHistory]);
+  }, [client, confirm, onSessionRemoved, refreshHistory, archivedProjects]);
 
   const deleteArchivedSession = useCallback(async (path: string) => {
     if (!client) return;
     confirm(
-      "删除归档会话",
-      "将永久删除该归档会话，不可恢复。",
+      tr("删除归档会话"),
+      tr("将永久删除该归档会话，不可恢复。"),
       "删除",
       () => {
         void (async () => {
@@ -115,9 +118,9 @@ export function useArchiving(
   const clearAllArchived = useCallback(() => {
     if (!client) return;
     confirm(
-      "清空全部归档",
-      `将永久删除全部 ${archivedProjects.length} 个归档项目的会话文件，不可恢复。`,
-      "全部删除",
+      tr("清空全部归档"),
+      tr("将永久删除全部 {n} 个归档项目的会话文件，不可恢复。", { n: archivedProjects.length }),
+      tr("全部删除"),
       () => {
         void (async () => {
           try {

@@ -1,6 +1,7 @@
 /** Model providers settings — container (state + handlers + composition). */
 
 import { useEffect, useRef, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import type { useTokens } from "@vagus/ui-tokens";
 import type { ProviderConfigUI } from "@vagus/ui-tokens";
 import { IconRefresh } from "./icons.js";
@@ -28,7 +29,8 @@ export function ModelsView({ providers, inputStyle, t, onSave, onRefresh, onTest
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
   const [editingModelId, setEditingModelId] = useState<string | null>(null);
-  const [modelForm, setModelForm] = useState({ contextWindow: "", maxTokens: "", vision: true });
+  const [modelForm, setModelForm] = useState<{ contextWindow: string; maxTokens: string; vision: boolean; reasoning: boolean; compat?: Record<string, unknown> }>({ contextWindow: "", maxTokens: "", vision: true, reasoning: false });
+  const [probeHint, setProbeHint] = useState<{ ok: boolean; text: string } | undefined>();
   const [testResult, setTestResult] = useState<{ modelId: string; ok: boolean; status?: number; reason?: "auth" | "model" } | undefined>(undefined);
 
   const active = selectedId !== null && !adding
@@ -144,15 +146,37 @@ export function ModelsView({ providers, inputStyle, t, onSave, onRefresh, onTest
     if (editingModelId === modelId) setEditingModelId(null);
   };
 
-  const startModelEdit = (m: { id: string; contextWindow?: number; maxTokens?: number; input?: string[] }): void => {
+  const startModelEdit = (m: { id: string; contextWindow?: number; maxTokens?: number; input?: string[]; reasoning?: boolean; compat?: Record<string, unknown> }): void => {
     setEditingModelId(m.id);
-    setModelForm({ contextWindow: m.contextWindow !== undefined ? String(m.contextWindow) : "", maxTokens: m.maxTokens !== undefined ? String(m.maxTokens) : "", vision: m.input?.includes("image") ?? true });
+    setProbeHint(undefined);
+    setModelForm({ contextWindow: m.contextWindow !== undefined ? String(m.contextWindow) : "", maxTokens: m.maxTokens !== undefined ? String(m.maxTokens) : "", vision: m.input?.includes("image") ?? true, reasoning: m.reasoning ?? false, compat: m.compat });
   };
 
   const saveModelEdit = (): void => {
     if (!active || editingModelId === null) return;
-    void onSave(providers.map((p) => p.id === active.id ? { ...p, models: p.models.map((m) => m.id === editingModelId ? { ...m, contextWindow: modelForm.contextWindow !== "" ? Number(modelForm.contextWindow) : undefined, maxTokens: modelForm.maxTokens !== "" ? Number(modelForm.maxTokens) : undefined, input: modelForm.vision ? ["text", "image"] : ["text"] } : m) } : p));
+    void onSave(providers.map((p) => p.id === active.id ? { ...p, models: p.models.map((m) => m.id === editingModelId ? { ...m, contextWindow: modelForm.contextWindow !== "" ? Number(modelForm.contextWindow) : undefined, maxTokens: modelForm.maxTokens !== "" ? Number(modelForm.maxTokens) : undefined, input: modelForm.vision ? ["text", "image"] : ["text"], reasoning: modelForm.reasoning, ...(modelForm.compat ? { compat: modelForm.compat } : {}) } : m) } : p));
     setEditingModelId(null);
+    setProbeHint(undefined);
+  };
+
+  /** Auto-probe the model being edited; fills the form and reports a hint. */
+  const editProbe = (modelId: string, onDone: (hint: { ok: boolean; text: string }) => void): void => {
+    if (!active) return;
+    void onProbe({ baseUrl: active.baseUrl, api: active.api, apiKey: active.apiKey, model: modelId })
+      .then((r) => {
+        if (r.ok) {
+          setModelForm((prev) => ({
+            ...prev,
+            compat: (r.compat as Record<string, unknown>) ?? undefined,
+            reasoning: r.reasoning ?? prev.reasoning,
+            vision: r.input?.includes("image") ?? prev.vision,
+          }));
+          onDone({ ok: true, text: tr("✓ 自动探测完成：compat/图片/思考配置已自动填入") });
+        } else {
+          onDone({ ok: false, text: tr("自动探测失败 — 请检查 baseUrl / apiKey，或稍后重试") });
+        }
+      })
+      .catch(() => onDone({ ok: false, text: tr("自动探测失败 — 请检查 baseUrl / apiKey，或稍后重试") }));
   };
 
   const canAdd = form.id.trim() !== "" && form.baseUrl.trim() !== "";
@@ -161,10 +185,10 @@ export function ModelsView({ providers, inputStyle, t, onSave, onRefresh, onTest
     <>
       <div style={{ display: "flex", alignItems: "flex-start", marginBottom: 20 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 22, fontWeight: 600, color: t.color.fg }}>模型设置</div>
-          <div style={{ fontSize: 13, color: t.color.muted, margin: "4px 0 0" }}>管理自定义模型供应商，配置后可在聊天时选择使用。</div>
+          <div style={{ fontSize: 22, fontWeight: 600, color: t.color.fg }}>{tr("模型设置")}</div>
+          <div style={{ fontSize: 13, color: t.color.muted, margin: "4px 0 0" }}>{tr("管理自定义模型供应商，配置后可在聊天时选择使用。")}</div>
         </div>
-        <button onClick={onRefresh} title="刷新配置" style={{ background: "transparent", border: `1px solid ${t.color.border}`, color: t.color.muted, borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}><IconRefresh /></button>
+        <button onClick={onRefresh} title={tr("刷新配置")} style={{ background: "transparent", border: `1px solid ${t.color.border}`, color: t.color.muted, borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}><IconRefresh /></button>
       </div>
 
       <div style={{ display: "flex", border: `1px solid ${t.color.border}`, borderRadius: 14, overflow: "hidden", background: t.color.bg }}>
@@ -174,6 +198,7 @@ export function ModelsView({ providers, inputStyle, t, onSave, onRefresh, onTest
             <ProviderDetail
               provider={active} detail={detail} setDetail={setDetail} showKey={showKey} setShowKey={setShowKey}
               testingId={testingId} testResult={testResult} editingModelId={editingModelId} modelForm={modelForm} setModelForm={setModelForm}
+              probeHint={probeHint} onEditProbe={editProbe}
               addModelOpen={addModelOpen} addModelForm={addModelForm} setAddModelForm={setAddModelForm} confirmDeleteId={confirmDeleteId} providers={providers}
               onToggleEnabled={toggleEnabled} onDelete={() => setConfirmDeleteId(selectedId)} onConfirmDelete={(id) => removeProvider(id)} onTest={testConnection} onAddModel={addModel}
               onRemoveModel={removeModel} onStartEdit={startModelEdit} onSaveEdit={saveModelEdit} onCancelEdit={() => setEditingModelId(null)}

@@ -1,4 +1,5 @@
 import { useTokens } from "@vagus/ui-tokens";
+import { tr } from "@vagus/ui-shared";
 import { ProjectSelector } from "@vagus/ui-input";
 import type { ProjectOption } from "@vagus/ui-input";
 import { InputCard } from "./input-card.js";
@@ -37,7 +38,7 @@ export function WelcomePane(props: {
           }}>◈</div>
           <div style={{ fontSize: "1.4em", fontWeight: 700, color: t.color.fg, marginTop: 12, letterSpacing: "-0.01em" }}>vagusPI</div>
           <div style={{ fontSize: "0.92em", color: t.color.muted, marginTop: 5 }}>
-            你的编码智能体工作台 —— 发送第一条消息开始新的对话
+            {tr("你的编码智能体工作台 —— 发送第一条消息开始新的对话")}
           </div>
         </div>
         <ProjectSelector

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import { useTokens } from "@vagus/ui-tokens";
 import type { ChatItem } from "./chat.js";
 import { collectEdits } from "./file-edits.js";
@@ -116,22 +117,22 @@ export function DiffSummary({
           <>
             <button
               onClick={acceptAll}
-              title="保留所有改动（前端确认，不移除）"
+              title={tr("保留所有改动（前端确认，不移除）")}
               style={{ ...btn, background: "rgba(22,163,74,0.12)", color: "#16a34a" }}
               onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(22,163,74,0.2)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(22,163,74,0.12)"; }}
             >
-              全部接受
+              {tr("全部接受")}
             </button>
             {revertable.length > 0 && (
               <button
                 onClick={revertAll}
-                title="反向应用所有可回退的编辑"
+                title={tr("反向应用所有可回退的编辑")}
                 style={{ ...btn, background: "rgba(239,68,68,0.1)", color: "#ef4444" }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.18)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.1)"; }}
               >
-                全部回退
+                {tr("全部回退")}
               </button>
             )}
           </>
@@ -181,7 +182,7 @@ export function DiffSummary({
                 {/* ✅ Accept (front-end only — edits stay as-is) */}
                 <button
                   onClick={(e) => { e.stopPropagation(); acceptFile(file); }}
-                  title="接受此文件的改动"
+                  title={tr("接受此文件的改动")}
                   style={{
                     width: 24, height: 24, borderRadius: 6, border: "none",
                     background: "rgba(22,163,74,0.12)", color: "#16a34a",
@@ -199,7 +200,7 @@ export function DiffSummary({
                 {/* Revert — git-free: restores the session's pre-edit snapshot */}
                 <button
                   onClick={(e) => { e.stopPropagation(); revertFile(file); }}
-                  title="回退此文件到会话编辑前状态"
+                  title={tr("回退此文件到会话编辑前状态")}
                     style={{
                       width: 24, height: 24, borderRadius: 6, border: "none",
                       background: "rgba(239,68,68,0.1)", color: "#ef4444",

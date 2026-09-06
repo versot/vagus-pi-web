@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import type { useTokens } from "@vagus/ui-tokens";
 import { useTheme } from "@vagus/ui-tokens";
 
@@ -211,7 +212,7 @@ export function PluginsView({ request, t, onClose }: PluginsViewProps): JSX.Elem
           <button
             className="piweb-pkg-back"
             onClick={onClose}
-            aria-label="返回上一页"
+            aria-label={tr("返回上一页")}
             style={{
               width: 40, height: 40, border: `1px solid ${t.color.border}`, borderRadius: 9,
               background: "transparent", color: t.color.muted, cursor: "pointer",
@@ -231,7 +232,7 @@ export function PluginsView({ request, t, onClose }: PluginsViewProps): JSX.Elem
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
           </button>
-          <div style={{ fontSize: 14, fontWeight: 680, letterSpacing: "-0.01em", color: t.color.fg }}>Pi 包管理</div>
+          <div style={{ fontSize: 14, fontWeight: 680, letterSpacing: "-0.01em", color: t.color.fg }}>{tr("Pi 包管理")}</div>
         </div>
 
         <div
@@ -269,12 +270,12 @@ export function PluginsView({ request, t, onClose }: PluginsViewProps): JSX.Elem
                 background: BRAND_GRADIENT, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent",
               }}
             >
-              Pi 包管理
+              {tr("Pi 包管理")}
             </h1>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 8, marginTop: 9, fontSize: 12.5, color: t.color.muted }}>
-              <span>与 pi CLI 完全互通 —— 这里安装的包，</span>
+              <span>{tr("与 pi CLI 完全互通 —— 这里安装的包，")}</span>
               <code style={{ fontFamily: t.font.mono, fontSize: 11.5, color: t.color.fg, background: t.color.surface, padding: "1px 6px", borderRadius: 5 }}>pi list</code>
-              <span>同样可见，反之亦然</span>
+              <span>{tr("同样可见，反之亦然")}</span>
             </div>
           </div>
 
@@ -297,8 +298,8 @@ export function PluginsView({ request, t, onClose }: PluginsViewProps): JSX.Elem
               onKeyDown={(e) => {
                 if (e.key === "Enter") void install(installText);
               }}
-              placeholder="输入包源安装，例如 npm:@foo/pi-tools"
-              aria-label="Pi 包源"
+              placeholder={tr("输入包源安装，例如 npm:@foo/pi-tools")}
+              aria-label={tr("Pi 包源")}
               style={{
                 flex: 1,
                 minWidth: 0,
@@ -346,7 +347,7 @@ export function PluginsView({ request, t, onClose }: PluginsViewProps): JSX.Elem
 
           {/* Source examples */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, fontSize: 11.5, color: t.color.muted, flexWrap: "wrap" }}>
-            <span>支持：</span>
+            <span>{tr("支持：")}</span>
             {INSTALL_EXAMPLES.map((ex) => (
               <button
                 key={ex}
@@ -368,7 +369,7 @@ export function PluginsView({ request, t, onClose }: PluginsViewProps): JSX.Elem
             <span aria-hidden="true" style={{ color: t.color.border }}>·</span>
             <span>
               <a href="https://pi.dev/packages" target="_blank" rel="noreferrer" style={{ color: "#a5b4fc", textDecoration: "none" }}>
-                浏览 pi.dev/packages ↗
+                {tr("浏览 pi.dev/packages ↗")}
               </a>
             </span>
           </div>
@@ -393,16 +394,16 @@ export function PluginsView({ request, t, onClose }: PluginsViewProps): JSX.Elem
           {loading && (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 11, padding: "40px 0", color: t.color.muted, fontSize: 13 }}>
               <span className="piweb-pkg-spinner" />
-              正在读取已安装的包…
+              {tr("正在读取已安装的包…")}
             </div>
           )}
 
           {!loading && packages.length === 0 && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 220, color: t.color.muted }}>
               <div style={{ width: 42, height: 42, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", color: "#a5b4fc", background: "rgba(129,140,248,0.1)", marginBottom: 12, fontSize: 18 }}>📦</div>
-              <div style={{ color: t.color.fg, fontSize: 14, fontWeight: 650 }}>还没有安装任何 pi 包</div>
+              <div style={{ color: t.color.fg, fontSize: 14, fontWeight: 650 }}>{tr("还没有安装任何 pi 包")}</div>
               <div style={{ marginTop: 5, fontSize: 12.5, textAlign: "center" }}>
-                在上面输入 <code style={{ fontFamily: t.font.mono, fontSize: 11.5, color: t.color.fg }}>npm:@包名</code> 安装，或到
+                {tr("在上面输入")} <code style={{ fontFamily: t.font.mono, fontSize: 11.5, color: t.color.fg }}>{tr("npm:@包名")}</code> 安装，或到
                 {" "}<a href="https://pi.dev/packages" target="_blank" rel="noreferrer" style={{ color: "#a5b4fc" }}>pi.dev/packages</a>{" "}
                 浏览生态。
               </div>
@@ -464,11 +465,11 @@ export function PluginsView({ request, t, onClose }: PluginsViewProps): JSX.Elem
                         {pkg.installed ? (
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 650, color: "#3fb950", background: "rgba(63,185,80,0.09)", border: "1px solid rgba(63,185,80,0.16)", borderRadius: 999, padding: "2.5px 7px" }}>
                             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
-                            已安装
+                            {tr("已安装")}
                           </span>
                         ) : (
                           <span style={{ fontSize: 10, fontWeight: 650, color: t.color.warning, background: "rgba(210,153,34,0.09)", border: "1px solid rgba(210,153,34,0.18)", borderRadius: 999, padding: "2.5px 7px" }}>
-                            未安装
+                            {tr("未安装")}
                           </span>
                         )}
                       </div>
@@ -531,9 +532,9 @@ export function PluginsView({ request, t, onClose }: PluginsViewProps): JSX.Elem
 
           {/* footer note */}
           <div style={{ marginTop: 26, fontSize: 11.5, lineHeight: 1.7, color: t.color.muted, textAlign: "center" }}>
-            在 pi TUI 中用 <code style={{ fontFamily: t.font.mono, fontSize: 11, color: t.color.fg }}>pi install npm:&lt;包名&gt;</code> 安装的包同样出现在这里。
+            {tr("在 pi TUI 中用")} <code style={{ fontFamily: t.font.mono, fontSize: 11, color: t.color.fg }}>{tr("pi install npm:<包名>")}</code> {tr("安装的包同样出现在这里。")}
             <br />
-            卸载请到 TUI 使用 <code style={{ fontFamily: t.font.mono, fontSize: 11, color: t.color.fg }}>pi remove</code>，或在这里点击"卸载"。
+            {tr("卸载请到 TUI 使用")} <code style={{ fontFamily: t.font.mono, fontSize: 11, color: t.color.fg }}>pi remove</code>{tr("，或在这里点击“卸载”。")}
           </div>
         </div>
       </main>

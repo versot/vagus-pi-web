@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import { useTheme, useTokens } from "@vagus/ui-tokens";
 import type { UsageStatsUI, UsageDailyPointUI } from "@vagus/ui-tokens";
 import { useSurfaceBg } from "./shared";
@@ -190,9 +191,9 @@ function ActivityHeatmap({ daily }: { daily: UsageDailyPointUI[] }): JSX.Element
         </div>
       )}
       <div style={{ display: "flex", alignItems: "center", gap: 4, alignSelf: "flex-end", fontSize: 10, color: t.color.muted }}>
-        <span>较少</span>
+        <span>{tr("较少")}</span>
         {palette.map((c) => <span key={c} style={{ width: 10, height: 10, borderRadius: 2, background: c, display: "inline-block" }} />)}
-        <span>较多</span>
+        <span>{tr("较多")}</span>
       </div>
     </div>
   );
@@ -215,7 +216,7 @@ function ModelRanking({ title, rows, total, mode }: {
     <div style={{ background: surfaceBg, border: `1px solid ${t.color.border}`, borderRadius: 14, padding: 20 }}>
       <div style={{ fontSize: 14, fontWeight: 600, color: t.color.fg, marginBottom: 16 }}>{title}</div>
       {display.length === 0 ? (
-        <div style={{ fontSize: 12, color: t.color.muted, padding: "8px 0" }}>暂无数据。</div>
+        <div style={{ fontSize: 12, color: t.color.muted, padding: "8px 0" }}>{tr("暂无数据。")}</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
           {display.map((m, i) => {
@@ -282,35 +283,35 @@ export function UsageView({ stats, t }: { stats: UsageStatsUI | null; t: ReturnT
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-          <span style={{ fontSize: 20, fontWeight: 600, color: t.color.fg }}>使用统计</span>
-          <span style={{ fontSize: 13, color: t.color.muted, borderBottom: `2px solid ${t.color.primary}`, paddingBottom: 2 }}>应用用量</span>
+          <span style={{ fontSize: 20, fontWeight: 600, color: t.color.fg }}>{tr("使用统计")}</span>
+          <span style={{ fontSize: 13, color: t.color.muted, borderBottom: `2px solid ${t.color.primary}`, paddingBottom: 2 }}>{tr("应用用量")}</span>
         </div>
       </div>
 
       {stats === null ? (
-        <div style={{ color: t.color.muted, fontSize: 13, padding: "60px 0", textAlign: "center" }}>加载中…</div>
+        <div style={{ color: t.color.muted, fontSize: 13, padding: "60px 0", textAlign: "center" }}>{tr("加载中…")}</div>
       ) : (
         <>
           {/* 1. Stat banner */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14 }}>
-            <StatTile label="Tokens 总用量" value={fmt(totalTokens)} sub="input + output（不含缓存复读）" />
-            <StatTile label="总花费" value={fmtCost(totalCost)} accent="#F472B6" sub={avgPerDay > 0 ? `日均 ${fmt(avgPerDay)} tokens` : undefined} />
-            <StatTile label="峰值单会话" value={fmt(peakTokens)} sub={longestSessionHours !== "—" ? `最长会话 ${longestSessionHours} 小时` : "暂无"} />
-            <StatTile label="会话数" value={String(totalSessions)} />
-            <StatTile label="消息数" value={String(totalMessages)} />
-            <StatTile label="活跃天数" value={String(activeDays)} sub={firstDay !== null ? `自 ${firstDay.getFullYear()}年${firstDay.getMonth() + 1}月起` : "暂无数据"} />
+            <StatTile label={tr("Tokens 总用量")} value={fmt(totalTokens)} sub="input + output（不含缓存复读）" />
+            <StatTile label={tr("总花费")} value={fmtCost(totalCost)} accent="#F472B6" sub={avgPerDay > 0 ? `日均 ${fmt(avgPerDay)} tokens` : undefined} />
+            <StatTile label={tr("峰值单会话")} value={fmt(peakTokens)} sub={longestSessionHours !== "—" ? `最长会话 ${longestSessionHours} 小时` : "暂无"} />
+            <StatTile label={tr("会话数")} value={String(totalSessions)} />
+            <StatTile label={tr("消息数")} value={String(totalMessages)} />
+            <StatTile label={tr("活跃天数")} value={String(activeDays)} sub={firstDay !== null ? `自 ${firstDay.getFullYear()}年${firstDay.getMonth() + 1}月起` : "暂无数据"} />
           </div>
 
           {/* 2. Heatmap */}
           <div style={{ background: surfaceBg, border: `1px solid ${t.color.border}`, borderRadius: 14, padding: 22 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-              <div style={{ fontSize: 15, fontWeight: 600, color: t.color.fg }}>活跃热力图</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: t.color.fg }}>{tr("活跃热力图")}</div>
               <div style={{ fontSize: 12, color: t.color.muted }}>
                 {totalTokens > 0 ? `累计 ${fmt(totalTokens)} tokens · 当前连击 ${streaks.current} 天` : "暂无活跃数据"}
               </div>
             </div>
             {daily.length === 0 ? (
-              <div style={{ fontSize: 12, color: t.color.muted, padding: "8px 0" }}>暂无活跃数据。</div>
+              <div style={{ fontSize: 12, color: t.color.muted, padding: "8px 0" }}>{tr("暂无活跃数据。")}</div>
             ) : (
               <ActivityHeatmap daily={daily} />
             )}
@@ -318,15 +319,15 @@ export function UsageView({ stats, t }: { stats: UsageStatsUI | null; t: ReturnT
 
           {/* 3. Model usage + cost ranking (side by side, full width each row on wide screens) */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 16 }}>
-            <ModelRanking title="模型用量（Token 占比）" rows={byModel.map((m) => ({ model: m.model, value: m.tokens }))} total={totalTokens} mode="tokens" />
-            <ModelRanking title="模型花费（USD 占比）" rows={costByModel} total={costTotal} mode="cost" />
+            <ModelRanking title={tr("模型用量（Token 占比）")} rows={byModel.map((m) => ({ model: m.model, value: m.tokens }))} total={totalTokens} mode="tokens" />
+            <ModelRanking title={tr("模型花费（USD 占比）")} rows={costByModel} total={costTotal} mode="cost" />
           </div>
 
           {/* 4. Footer */}
           <div style={{ display: "flex", gap: 28, fontSize: 12, color: t.color.muted, paddingTop: 4, flexWrap: "wrap" }}>
-            <span>最长连击 <b style={{ color: t.color.fg }}>{streaks.longest}</b> 天</span>
-            <span>最近活跃 <b style={{ color: t.color.fg }}>{lastDay !== null ? `${lastDay.getMonth() + 1}月${lastDay.getDate()}日` : "—"}</b></span>
-            {firstDay !== null && <span>起始于 <b style={{ color: t.color.fg }}>{firstDay.getFullYear()}年{firstDay.getMonth() + 1}月{firstDay.getDate()}日</b></span>}
+            <span>{tr("最长连击")} <b style={{ color: t.color.fg }}>{streaks.longest}</b> {tr("天")}</span>
+            <span>{tr("最近活跃")} <b style={{ color: t.color.fg }}>{lastDay !== null ? `${lastDay.getMonth() + 1}月${lastDay.getDate()}日` : "—"}</b></span>
+            {firstDay !== null && <span>{tr("起始于")} <b style={{ color: t.color.fg }}>{firstDay.getFullYear()}年{firstDay.getMonth() + 1}月{firstDay.getDate()}日</b></span>}
           </div>
         </>
       )}

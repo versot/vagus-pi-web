@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnDaemon } from "../daemon.js";
+import { defaultWsPort, spawnDaemon } from "../daemon.js";
 
 /**
  * `pi-web web` — spawns the daemon (which serves the built web UI over HTTP
@@ -15,7 +15,8 @@ import { spawnDaemon } from "../daemon.js";
  * `gui` is kept as a backwards-compatible alias for `web`.
  */
 
-const DEFAULT_WS_PORT = 19707;
+// Dev (source) and production (npx bundle) default to different ports so both can run side by side.
+const DEFAULT_WS_PORT = defaultWsPort();
 
 /**
  * Resolves the built web UI directory.

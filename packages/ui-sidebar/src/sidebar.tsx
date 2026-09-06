@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { tr } from "@vagus/ui-shared";
 import { useTheme, useTokens } from "@vagus/ui-tokens";
 import type { SessionHistoryItem } from "@vagus/ui-tokens";
 import { ArchiveSection } from "./archive-section.js";
@@ -293,7 +294,7 @@ export function SessionSidebar({
           {/* Collapsed rail: expand button on top, then icon-only actions */}
           <div style={{ flex: "none", height: 54, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: `1px solid ${t.color.border}` }}>
             <button
-              title="展开侧栏"
+              title={tr("展开侧栏")}
               onClick={() => setCollapsed(false)}
               style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 8, border: "none", background: "transparent", color: t.color.muted, cursor: "pointer", transition: ROW_TRANSITION, outline: "none" }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover; (e.currentTarget as HTMLElement).style.color = t.color.fg; }}
@@ -303,12 +304,12 @@ export function SessionSidebar({
             </button>
           </div>
           <div style={{ flex: "none", padding: "14px 8px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-            <button title="新对话" onClick={onNewSession}
+            <button title={tr("新对话")} onClick={onNewSession}
               style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 9, border: "none", cursor: "pointer", outline: "none", background: `linear-gradient(135deg, ${BRAND_A}, ${BRAND_B})`, color: "#fff", boxShadow: "0 2px 10px rgba(99,102,241,0.35)" }}
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
             </button>
-            <button title="插件" onClick={onOpenPlugins}
+            <button title={tr("插件")} onClick={onOpenPlugins}
               style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 9, border: "none", background: "transparent", color: t.color.muted, cursor: "pointer", transition: ROW_TRANSITION, outline: "none" }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover; (e.currentTarget as HTMLElement).style.color = t.color.fg; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = t.color.muted; }}
@@ -318,7 +319,7 @@ export function SessionSidebar({
           </div>
           <div style={{ flex: 1 }} />
           <div style={{ flex: "none", borderTop: `1px solid ${t.color.border}`, padding: 8, display: "flex", justifyContent: "center" }}>
-            <button title="设置" onClick={onOpenSettings}
+            <button title={tr("设置")} onClick={onOpenSettings}
               style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 9, border: "none", background: "transparent", color: t.color.muted, cursor: "pointer", transition: ROW_TRANSITION, outline: "none" }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover; (e.currentTarget as HTMLElement).style.color = t.color.fg; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = t.color.muted; }}
@@ -335,7 +336,7 @@ export function SessionSidebar({
         <span style={{ fontSize: "1.05em", fontWeight: 700, color: t.color.fg }}>vagusPI</span>
         <span style={{ flex: 1 }} />
         <button
-          title="收起侧栏"
+          title={tr("收起侧栏")}
           onClick={() => setCollapsed(true)}
           style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 8, border: "none", background: "transparent", color: t.color.muted, cursor: "pointer", transition: ROW_TRANSITION, outline: "none", flexShrink: 0 }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover; (e.currentTarget as HTMLElement).style.color = t.color.fg; }}
@@ -358,7 +359,7 @@ export function SessionSidebar({
           onBlur={(e) => { e.currentTarget.style.boxShadow = "0 2px 10px rgba(99,102,241,0.35)"; }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-          <span style={{ flex: 1, textAlign: "left" }}>新对话</span>
+          <span style={{ flex: 1, textAlign: "left" }}>{tr("新对话")}</span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg>
         </button>
         <button
@@ -372,17 +373,17 @@ export function SessionSidebar({
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-3 3a5 5 0 0 0-.5 7.5z"/><path d="M14 10a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l3-3a5 5 0 0 0 .5-7.5z"/></svg>
-          <span style={{ flex: 1, textAlign: "left" }}>插件</span>
+          <span style={{ flex: 1, textAlign: "left" }}>{tr("插件")}</span>
         </button>
       </div>
 
       {/* Project tree (scrollable) */}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "4px 8px 8px" }}>
-        <div style={{ fontSize: "0.79em", fontWeight: 600, color: t.color.muted, textTransform: "uppercase", letterSpacing: "0.08em", padding: "12px 10px 6px" }}>项目</div>
+        <div style={{ fontSize: "0.79em", fontWeight: 600, color: t.color.muted, textTransform: "uppercase", letterSpacing: "0.08em", padding: "12px 10px 6px" }}>{tr("项目")}</div>
 
         {groups.length === 0 && (
           <div style={{ fontSize: "0.85em", color: t.color.muted, padding: "8px 10px", lineHeight: 1.5 }}>
-            暂无会话 — 点击"新对话"开始。
+            {tr("暂无会话 — 点击“新对话”开始。")}
           </div>
         )}
 
@@ -461,7 +462,7 @@ export function SessionSidebar({
                         </span>
                         <span style={{ width: 12, display: "inline-flex", justifyContent: "center", alignItems: "center", flexShrink: 0 }}>
                           {(busyPaths.has(s.path) || pendingDialogPaths.has(s.path)) && (
-                            <span title="工作中" style={{ width: 7, height: 7, borderRadius: "50%", background: t.color.primary, animation: "vagus-pulse 1.2s ease-in-out infinite", display: "inline-block" }} />
+                            <span title={tr("工作中")} style={{ width: 7, height: 7, borderRadius: "50%", background: t.color.primary, animation: "vagus-pulse 1.2s ease-in-out infinite", display: "inline-block" }} />
                           )}
                         </span>
 
@@ -478,7 +479,7 @@ export function SessionSidebar({
         {/* 最近 */}
         {groups.length > 0 && (
           <>
-            <div style={{ fontSize: "0.79em", fontWeight: 600, color: t.color.muted, textTransform: "uppercase", letterSpacing: "0.08em", padding: "16px 10px 6px" }}>最近</div>
+            <div style={{ fontSize: "0.79em", fontWeight: 600, color: t.color.muted, textTransform: "uppercase", letterSpacing: "0.08em", padding: "16px 10px 6px" }}>{tr("最近")}</div>
             <div style={{ paddingLeft: 0 }}>
               {sessions.slice(0, 5).map((s) => (
                 <div
@@ -527,7 +528,7 @@ export function SessionSidebar({
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          <span>设置</span>
+          <span>{tr("设置")}</span>
         </button>
       </div>
 
@@ -542,18 +543,18 @@ export function SessionSidebar({
             <>
               <div onClick={() => handleRename(menu.session)} style={menuItemStyle} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 20h4l10-10a2.83 2.83 0 0 0-4-4L4 16v4z"/></svg>
-                重命名
+                {tr("重命名")}
               </div>
               {onTogglePin && (
                 <div onClick={() => { setMenu(null); void onTogglePin(menu.session.path); }} style={menuItemStyle} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill={pinnedSessions.has(menu.session.path) ? "#6366f1" : "none"} stroke={pinnedSessions.has(menu.session.path) ? "#6366f1" : "currentColor"} strokeWidth="1.6"><path d="M12 17l-5.88 3.09.87-6.02L2.6 9.43l6.44-.94L12 2.5l2.96 5.99 6.44.94-4.39 4.64.87 6.02z"/></svg>
-                  置顶
+                  {tr("置顶")}
                 </div>
               )}
               {onArchiveSession && (
                 <div onClick={() => { setMenu(null); void onArchiveSession(menu.session.path); }} style={menuItemStyle} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 8l-2-4H5L3 8v2h18V8z"/><path d="M3 10v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8"/></svg>
-                  归档
+                  {tr("归档")}
                 </div>
               )}
             </>
@@ -563,13 +564,13 @@ export function SessionSidebar({
               {onRestoreSession && (
                 <div onClick={() => { setMenu(null); void onRestoreSession(menu.session.path); }} style={menuItemStyle} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                  恢复
+                  {tr("恢复")}
                 </div>
               )}
               {onDeleteArchivedSession && (
                 <div onClick={() => { setMenu(null); void onDeleteArchivedSession(menu.session.path); }} style={{...menuItemStyle, color: "#E5484D"}} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
-                  删除
+                  {tr("删除")}
                 </div>
               )}
             </>
@@ -577,13 +578,13 @@ export function SessionSidebar({
           {menu.kind === "project" && onArchiveProject && (
             <div onClick={() => { setMenu(null); void onArchiveProject(menu.cwd); }} style={menuItemStyle} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 8l-2-4H5L3 8v2h18V8z"/><path d="M3 10v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8"/></svg>
-              归档项目
+              {tr("归档项目")}
             </div>
           )}
           {menu.kind === "archivedAll" && (
             <div onClick={() => { setMenu(null); onClearAllArchived?.(); }} style={{...menuItemStyle, color: "#E5484D"}} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg>
-              清空全部归档
+              {tr("清空全部归档")}
             </div>
           )}
           {menu.kind === "archived" && (
@@ -591,13 +592,13 @@ export function SessionSidebar({
               {onUnarchiveProject && (
                 <div onClick={() => { setMenu(null); void onUnarchiveProject(menu.dirKey); }} style={menuItemStyle} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 8l-2-4H5L3 8v2h18V8z"/><path d="M3 10v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8"/><path d="M12 13v3"/></svg>
-                  恢复项目
+                  {tr("恢复项目")}
                 </div>
               )}
               {onDeleteProject && (
                 <div onClick={() => { setMenu(null); void onDeleteProject(menu.dirKey); }} style={{...menuItemStyle, color: "#E5484D"}} onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover} onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
-                  彻底删除
+                  {tr("彻底删除")}
                 </div>
               )}
             </>

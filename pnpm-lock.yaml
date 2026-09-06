@@ -234,6 +234,9 @@ importers:
 
   packages/ui-input:
     dependencies:
+      '@vagus/ui-shared':
+        specifier: workspace:*
+        version: link:../ui-shared
       '@vagus/ui-tokens':
         specifier: workspace:*
         version: link:../ui-tokens
@@ -300,6 +303,9 @@ importers:
 
   packages/ui-sidebar:
     dependencies:
+      '@vagus/ui-shared':
+        specifier: workspace:*
+        version: link:../ui-shared
       '@vagus/ui-tokens':
         specifier: workspace:*
         version: link:../ui-tokens

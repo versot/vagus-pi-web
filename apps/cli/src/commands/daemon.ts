@@ -61,8 +61,10 @@ function applyHttpProxy(): void {
       const normalized = /^https?:\/\//.test(proxy) ? proxy : `http://${proxy}`;
       process.env.HTTPS_PROXY = normalized;
       process.env.HTTP_PROXY = normalized;
+      // Local daemon/GUI traffic must never go through the proxy.
+      process.env.NO_PROXY ??= "localhost,127.0.0.1";
       setGlobalDispatcher(new EnvHttpProxyAgent());
-      process.stderr.write(`vagus: http proxy enabled → ${normalized}\n`);
+      process.stderr.write(`vagus: http proxy enabled → ${normalized.replace(/\/\/([^@/]*)@/, "//***@")}\n`);
     }
   } catch (err) {
     process.stderr.write(`vagus: proxy setup skipped: ${err instanceof Error ? err.message : String(err)}\n`);
@@ -796,11 +798,12 @@ export async function runDaemon(): Promise<number> {
 
   // The GUI attaches over a local WebSocket on the same protocol. When
   // VAGUS_GUI_DIR points at a built UI, the daemon serves it over HTTP on
-  // the same port (one process, one port — see WsServerHost).
-  const wsPort = Number(process.env.VAGUS_WS_PORT ?? "19707");
+  // the same port (one process, one port — see WsServerHost). Ports auto-
+  // increment when busy: an npx instance and a dev daemon can coexist.
+  const requestedPort = Number(process.env.VAGUS_WS_PORT ?? "19707");
   const wsHost = new WsServerHost();
-  wsHost.listen({
-    port: wsPort,
+  await wsHost.listen({
+    port: requestedPort,
     registerMethods,
     staticDir: process.env.VAGUS_GUI_DIR,
   });
@@ -815,9 +818,7 @@ export async function runDaemon(): Promise<number> {
   const shutdown = (signal: string): void => {
     if (shuttingDown) return;
     shuttingDown = true;
-    // Trace who/what triggered the shutdown — a stray signal with no visible
-    // cause is undiagnosable after the fact.
-    process.stderr.write(`vagus: daemon shutting down (${signal})\n${new Error("shutdown trace").stack}\n`);
+    process.stderr.write(`vagus: daemon shutting down (${signal})\n`);
     void (async () => {
       try {
         wsHost.close();
@@ -830,13 +831,6 @@ export async function runDaemon(): Promise<number> {
   };
   process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));
-  // Exit diagnostics: distinguish "event loop drained" from a forced exit.
-  process.on("beforeExit", (code) => {
-    process.stderr.write(`vagus: daemon beforeExit (event loop empty), code=${code}\n`);
-  });
-  process.on("exit", (code) => {
-    process.stderr.write(`vagus: daemon exit, code=${code}\n`);
-  });
 
   transport.start();
   process.stderr.write(`pi-web daemon ready (state: ${stateDir})\n`);

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import { useTokens } from "@vagus/ui-tokens";
 
 /**
@@ -173,15 +174,15 @@ export function FolderPicker({ listDir, roots, onPick }: FolderPickerProps): JSX
       <div style={card} onMouseDown={(e) => e.stopPropagation()}>
         {/* Title bar */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px 8px", flexShrink: 0 }}>
-          <span style={{ fontSize: "0.96em", fontWeight: 600, color: t.color.fg }}>选择项目文件夹</span>
-          <button style={iconBtn} onClick={() => onPick(null)} title="关闭">
+          <span style={{ fontSize: "0.96em", fontWeight: 600, color: t.color.fg }}>{tr("选择项目文件夹")}</span>
+          <button style={iconBtn} onClick={() => onPick(null)} title={tr("关闭")}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </div>
 
         {/* Address bar */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 16px 10px", flexShrink: 0 }}>
-          <button style={{ ...iconBtn, opacity: atRoot ? 0.35 : 1, cursor: atRoot ? "default" : "pointer" }} disabled={atRoot} onClick={() => navigate(upPath)} title="上一级">
+          <button style={{ ...iconBtn, opacity: atRoot ? 0.35 : 1, cursor: atRoot ? "default" : "pointer" }} disabled={atRoot} onClick={() => navigate(upPath)} title={tr("上一级")}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           </button>
           {editingPath ? (
@@ -191,7 +192,7 @@ export function FolderPicker({ listDir, roots, onPick }: FolderPickerProps): JSX
                 value={pathDraft}
                 onChange={(e) => setPathDraft(e.target.value)}
                 onBlur={() => setEditingPath(false)}
-                placeholder="输入路径（如 ~/projects/app）"
+                placeholder={tr("输入路径（如 ~/projects/app）")}
                 style={{ flex: 1, height: 30, border: `1px solid ${t.color.border}`, borderRadius: 8, outline: "none", padding: "0 10px", fontSize: "0.89em", background: t.color.surface, color: t.color.fg, fontFamily: "inherit" }}
               />
             </form>
@@ -228,7 +229,7 @@ export function FolderPicker({ listDir, roots, onPick }: FolderPickerProps): JSX
         <div style={{ display: "flex", flex: 1, minHeight: 0, borderTop: `1px solid ${t.color.border}` }}>
           {/* Quick access rail */}
           <aside style={{ width: 150, flexShrink: 0, borderRight: `1px solid ${t.color.border}`, padding: "6px 4px", overflowY: "auto", display: "flex", flexDirection: "column" }}>
-            <div style={{ padding: "6px 10px 4px", fontSize: "0.75em", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", color: t.color.muted }}>位置</div>
+            <div style={{ padding: "6px 10px 4px", fontSize: "0.75em", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", color: t.color.muted }}>{tr("位置")}</div>
             {quickRoots.places.map((root) => (
               <button
                 key={root.path}
@@ -246,7 +247,7 @@ export function FolderPicker({ listDir, roots, onPick }: FolderPickerProps): JSX
             ))}
             {quickRoots.drives.length > 0 && (
               <>
-                <div style={{ padding: "8px 10px 4px", fontSize: "0.75em", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", color: t.color.muted }}>驱动器</div>
+                <div style={{ padding: "8px 10px 4px", fontSize: "0.75em", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", color: t.color.muted }}>{tr("驱动器")}</div>
                 {quickRoots.drives.map((drive) => (
                   <button
                     key={drive.path}
@@ -266,7 +267,7 @@ export function FolderPicker({ listDir, roots, onPick }: FolderPickerProps): JSX
             )}
             {recent.length > 0 && (
               <>
-                <div style={{ padding: "8px 10px 4px", fontSize: "0.75em", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", color: t.color.muted }}>最近</div>
+                <div style={{ padding: "8px 10px 4px", fontSize: "0.75em", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", color: t.color.muted }}>{tr("最近")}</div>
                 {recent.map((p) => (
                   <button
                     key={p}
@@ -289,11 +290,11 @@ export function FolderPicker({ listDir, roots, onPick }: FolderPickerProps): JSX
           {/* Icon grid */}
           <div style={{ flex: 1, minWidth: 0, overflowY: "auto", padding: 10, display: "flex", flexDirection: "column" }}>
             {loading ? (
-              <div style={{ padding: "32px 0", textAlign: "center", color: t.color.muted, fontSize: "0.93em" }}>加载中…</div>
+              <div style={{ padding: "32px 0", textAlign: "center", color: t.color.muted, fontSize: "0.93em" }}>{tr("加载中…")}</div>
             ) : error ? (
               <div style={{ padding: "32px 0", textAlign: "center", color: "#E5484D", fontSize: "0.93em" }}>{error}</div>
             ) : entries.length === 0 ? (
-              <div style={{ padding: "32px 0", textAlign: "center", color: t.color.muted, fontSize: "0.93em" }}>（空文件夹）</div>
+              <div style={{ padding: "32px 0", textAlign: "center", color: t.color.muted, fontSize: "0.93em" }}>{tr("（空文件夹）")}</div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))", gap: 4 }}>
                 {entries.map((entry) => (
@@ -323,7 +324,7 @@ export function FolderPicker({ listDir, roots, onPick }: FolderPickerProps): JSX
           <span style={{ fontSize: "0.82em", color: t.color.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={currentPath}>{currentPath}</span>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <button onClick={() => onPick(null)} style={{ height: 30, padding: "0 16px", borderRadius: 8, border: `1px solid ${t.color.border}`, background: "transparent", color: t.color.muted, fontSize: "0.89em", cursor: "pointer" }}>
-              取消
+              {tr("取消")}
             </button>
             <button onClick={handleSelect} disabled={!currentPath} style={{ height: 30, padding: "0 16px", borderRadius: 8, border: "none", background: "#3A3A3A", color: "#fff", fontSize: "0.89em", cursor: "pointer", fontWeight: 500 }}>
               选择{selected ? ` “${(selected.split(/[\\/]/).filter(Boolean).pop() ?? selected)}”` : "此文件夹"}

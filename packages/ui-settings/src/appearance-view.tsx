@@ -1,9 +1,10 @@
 /** Appearance settings (theme + code display). */
 
-import { useTheme } from "@vagus/ui-tokens";
+import { useI18n, useTheme } from "@vagus/ui-tokens";
+import { tr } from "@vagus/ui-shared";
 import type { useTokens } from "@vagus/ui-tokens";
 import type { AppearanceSettings } from "@vagus/ui-tokens";
-import { codePaletteFor, highlightLine } from "@vagus/ui-shared";
+import {codePaletteFor, highlightLine, t} from "@vagus/ui-shared";
 import { Section, SettingRow, Segmented, Switch, SizeStepper } from "./shared.js";
 
 const CODE_SAMPLE_LINES = [
@@ -158,23 +159,25 @@ export function AppearanceView({ draft, onChange, t }: {
 
   const { theme, preference, setPreference } = useTheme();
 
+  const { locale, setLocale } = useI18n();
+
 
 
   return (
 
     <>
 
-      <div style={{ fontSize: 22, fontWeight: 600, color: t.color.fg }}>外观</div>
+      <div style={{ fontSize: 22, fontWeight: 600, color: t.color.fg }}>{tr("外观")}</div>
 
       <div style={{ marginTop: 24 }}>
 
-      <Section title="界面设置" description="设置应用主题和界面文字大小。">
+      <Section title={tr("界面设置")} description={tr("设置应用主题和界面文字大小。")}>
 
         <SettingRow
 
-          label="界面主题"
+          label={tr("界面主题")}
 
-          hint="选择浅色、深色或跟随系统主题。"
+          hint={tr("选择浅色、深色或跟随系统主题。")}
 
           control={
 
@@ -206,9 +209,41 @@ export function AppearanceView({ draft, onChange, t }: {
 
         <SettingRow
 
-          label="界面字号"
+          label={tr("界面语言")}
 
-          hint="调整应用界面的文字大小，图标和布局尺寸不受影响。"
+          hint={tr("切换界面显示语言，立即生效。")}
+
+          control={
+
+            <Segmented
+
+              options={[
+
+                { value: "zh", label: tr("中文") },
+
+                { value: "en", label: "English" },
+
+              ]}
+
+              value={locale}
+
+              onChange={(v) => setLocale(v as "zh" | "en")}
+
+              t={t}
+
+            />
+
+          }
+
+          t={t}
+
+        />
+
+        <SettingRow
+
+          label={tr("界面字号")}
+
+          hint={tr("调整应用界面的文字大小，图标和布局尺寸不受影响。")}
 
           last
 
@@ -222,13 +257,13 @@ export function AppearanceView({ draft, onChange, t }: {
 
 
 
-      <Section title="代码设置" description="设置代码内容的主题、字号和显示方式，不受界面字号影响。">
+      <Section title={tr("代码设置")} description={tr("设置代码内容的主题、字号和显示方式，不受界面字号影响。")}>
 
         <SettingRow
 
-          label="显示行号"
+          label={tr("显示行号")}
 
-          hint="在代码内容和差异视图中显示行号。"
+          hint={tr("在代码内容和差异视图中显示行号。")}
 
           control={<Switch checked={draft.showLineNumbers} onChange={(v) => onChange({ showLineNumbers: v })} t={t} />}
 
@@ -238,9 +273,9 @@ export function AppearanceView({ draft, onChange, t }: {
 
         <SettingRow
 
-          label="长行自动换行"
+          label={tr("长行自动换行")}
 
-          hint="代码内容过长时自动换行。"
+          hint={tr("代码内容过长时自动换行。")}
 
           control={<Switch checked={draft.wrapLongLines} onChange={(v) => onChange({ wrapLongLines: v })} t={t} />}
 
@@ -250,9 +285,9 @@ export function AppearanceView({ draft, onChange, t }: {
 
         <SettingRow
 
-          label="代码字号"
+          label={tr("代码字号")}
 
-          hint="调整代码块、文件预览和差异视图的默认字号。"
+          hint={tr("调整代码块、文件预览和差异视图的默认字号。")}
 
           last
 
@@ -266,13 +301,13 @@ export function AppearanceView({ draft, onChange, t }: {
 
 
 
-      <Section title="代码预览" description="同时预览浅色与深色代码主题，当前界面使用的主题会标记为“当前生效”。">
+      <Section title={tr("代码预览")} description={tr("同时预览浅色与深色代码主题，当前界面使用的主题会标记为“当前生效”。")}>
 
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", padding: 18 }}>
 
           <CodePreviewCard
 
-            title="浅色预览"
+            title={tr("浅色预览")}
 
             themeName="GitHub Light"
 
@@ -290,7 +325,7 @@ export function AppearanceView({ draft, onChange, t }: {
 
           <CodePreviewCard
 
-            title="深色预览"
+            title={tr("深色预览")}
 
             themeName="GitHub Dark"
 

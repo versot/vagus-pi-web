@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { tr } from "@vagus/ui-shared";
 import { useTokens } from "@vagus/ui-tokens";
 import type { SessionHistoryItem } from "@vagus/ui-tokens";
 import { BubbleIcon, collapsible, projectName, timeAgo, ROW_TRANSITION } from "./common.js";
@@ -53,18 +54,18 @@ export function ArchiveSection(props: {
         onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ flexShrink: 0 }}><path d="M21 8l-2-4H5L3 8v2h18V8z"/><path d="M3 10v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8"/><path d="M12 13v3"/></svg>
-        <span style={{ flex: 1, textAlign: "left" }}>已归档</span>
+        <span style={{ flex: 1, textAlign: "left" }}>{tr("已归档")}</span>
         <span style={{ fontSize: "0.75em", color: t.color.muted, background: t.color.sidebarHover, borderRadius: 8, padding: "1px 7px" }}>{props.archivedProjects.length}</span>
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, transform: open ? "rotate(0)" : "rotate(-90deg)", transition: "transform 0.15s ease" }}><path d="M9 18l6-6-6-6"/></svg>
       </div>
       {collapsible(open, (
         <div style={{ paddingLeft: 6 }}>
           {groups.map(({ cwd, dirKey, sessions: groupSessions }) => {
-            const isOpen = !props.collapsed.has(`arch:${cwd}`);
+            const isOpen = !props.collapsed.has(`arch:${dirKey}`);
             return (
-              <div key={cwd} style={{ marginBottom: 1 }}>
+              <div key={dirKey} style={{ marginBottom: 1 }}>
                 <div
-                  onClick={() => props.onToggleProject(`arch:${cwd}`)}
+                  onClick={() => props.onToggleProject(`arch:${dirKey}`)}
                   onContextMenu={(e) => props.onProjectContextMenu(e, cwd, dirKey)}
                   style={{
                     display: "flex", alignItems: "center", gap: 8,
@@ -99,7 +100,7 @@ export function ArchiveSection(props: {
                         <BubbleIcon />
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>{(s.name ?? s.firstMessage.slice(0, 40)) || "（空会话）"}</span>
                         {props.busyPaths.has(s.path) && (
-                          <span title="工作中" style={{ width: 7, height: 7, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", animation: "vagus-pulse 1.2s ease-in-out infinite", flexShrink: 0, display: "inline-block" }} />
+                          <span title={tr("工作中")} style={{ width: 7, height: 7, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", animation: "vagus-pulse 1.2s ease-in-out infinite", flexShrink: 0, display: "inline-block" }} />
                         )}
                         <span style={{ fontSize: "0.79em", color: t.color.muted, flexShrink: 0 }}>{timeAgo(s.modified)}</span>
                       </div>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, lazy, useMemo, useRef, useState, Suspense } from "react";
+import { tr } from "@vagus/ui-shared";
 import type { Transport } from "@vagus/ui-shared";
 import type { JsonRpcClient } from "@vagus/ui-shared";
 import { SessionSidebar } from "@vagus/ui-sidebar";
@@ -64,8 +65,8 @@ const normText = (s: string): string => s.trim().replace(/\s+/g, " ");
  * rest: model picker, session tree, settings panel, …).
  */
 const WEB_BUILTIN_COMMANDS: CommandInfo[] = [
-  { type: "builtin", name: "compact", description: "压缩上下文，摘要历史对话，腾出上下文空间" },
-  { type: "builtin", name: "reload", description: "重新加载扩展、技能、提示词（装包后让 agent 感知新能力）" },
+  { type: "builtin", name: "compact", description: tr("压缩上下文，摘要历史对话，腾出上下文空间") },
+  { type: "builtin", name: "reload", description: tr("重新加载扩展、技能、提示词（装包后让 agent 感知新能力）") },
 ];
 
 export function App({ transport: injectedTransport }: AppProps): JSX.Element {
@@ -116,8 +117,17 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
   // ── global (non-session) UI state ──────────────────────────────────────
   const [sessions, setSessions] = useState<SessionHistoryItem[]>([]);
   const [activePath, setActivePath] = useState<string | undefined>();
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [pluginsOpen, setPluginsOpen] = useState(false);
+  // View toggles survive the language-switch remount (key={locale} resets
+  // all app state; restoring these keeps the user inside settings/plugins
+  // when they flip the language there).
+  const [settingsOpen, setSettingsOpen] = useState<boolean>(() => sessionStorage.getItem("vagus.view.settings") === "1");
+  const [pluginsOpen, setPluginsOpen] = useState<boolean>(() => sessionStorage.getItem("vagus.view.plugins") === "1");
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("vagus.view.settings", settingsOpen ? "1" : "0");
+      sessionStorage.setItem("vagus.view.plugins", pluginsOpen ? "1" : "0");
+    } catch { /* private mode */ }
+  }, [settingsOpen, pluginsOpen]);
   const [settingsCat, setSettingsCat] = useState<Category>("appearance");
   const [usageStats, setUsageStats] = useState<UsageStatsUI | null>(null);
   const [pinnedSessions, setPinnedSessions] = useState<Set<string>>(new Set());
@@ -433,7 +443,7 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
       case "reload":
         // Give visible feedback — the engine rebuilds the extension runtime,
         // which is silent from the frontend's perspective.
-        setUiToast({ text: "正在重新加载扩展与技能…", type: "info" });
+        setUiToast({ text: tr("正在重新加载扩展与技能…"), type: "info" });
         if (uiToastTimer.current) clearTimeout(uiToastTimer.current);
         uiToastTimer.current = setTimeout(() => setUiToast(null), 2500);
         if (client && state.activeId) {
@@ -441,7 +451,7 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
             .request("session.reload", { sessionId: state.activeId })
             .then(() => {
               refreshCommands(); // re-list commands (new extensions may have registered more)
-              setUiToast({ text: "✅ 已重新加载扩展与技能", type: "info" });
+              setUiToast({ text: tr("✅ 已重新加载扩展与技能"), type: "info" });
               if (uiToastTimer.current) clearTimeout(uiToastTimer.current);
               uiToastTimer.current = setTimeout(() => setUiToast(null), 2500);
             })
@@ -516,7 +526,7 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
 
   const forkFrom = useCallback((messageId: number, matchText: string, displayText: string): void => {
     // 先弹确认框，防止误点
-    confirm("派生新会话", "从这条消息开始创建一条新的会话，原会话保持不变。\n新会话只包含到此为止的上下文。", "确认派生", () => {
+    confirm(tr("派生新会话"), tr("从这条消息开始创建一条新的会话，原会话保持不变。\n新会话只包含到此为止的上下文。"), tr("确认派生"), () => {
       void runForkRef.current(matchText, displayText);
     });
   }, [confirm]);
@@ -526,7 +536,7 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
     const sid = state.activeId;
     if (!c || !sid) return;
     // 即时反馈：确认后立刻提示，避免“点了没反应”的错觉
-    setUiToast({ text: "正在派生新会话…", type: "info" });
+    setUiToast({ text: tr("正在派生新会话…"), type: "info" });
     if (uiToastTimer.current) clearTimeout(uiToastTimer.current);
     try {
       // Find this message's session entry by matching fork points (text-based;
@@ -547,12 +557,12 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
       // new JSONL with context up to this entry; original session untouched).
       const created = (await c.request("session.fork", { sessionId: sid, entryId: target.entryId })) as { sessionId: string; cwd: string; sessionFile: string } | undefined;
       if (!created?.sessionId) {
-        setUiToast({ text: "派生失败：daemon 未返回新会话", type: "error" });
+        setUiToast({ text: tr("派生失败：daemon 未返回新会话"), type: "error" });
         return;
       }
       // 派生后自动命名：原名称 (n)，n 为当前同源会话数 + 1
       const sourceSession = sessions.find((s) => s.id === sid || s.path === activePath);
-      const baseName = sourceSession?.name || sourceSession?.firstMessage || "新会话";
+      const baseName = sourceSession?.name || sourceSession?.firstMessage || tr("新会话");
       const nameCount = sessions.filter((s) => (s.name || s.firstMessage || "").startsWith(baseName)).length;
       const newName = `${baseName} (${nameCount + 1})`;
       try {
@@ -569,11 +579,10 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
       // Pre-fill the input with the user-friendly form of the forked message
       // (e.g. "/skill:xxx" for skill messages, not the expanded skill body).
       inputState.setInput(displayText);
-      setUiToast({ text: "✅ 新会话已派生，可编辑消息后发送", type: "info" });
+      setUiToast({ text: tr("✅ 新会话已派生，可编辑消息后发送"), type: "info" });
       if (uiToastTimer.current) clearTimeout(uiToastTimer.current);
       uiToastTimer.current = setTimeout(() => setUiToast(null), 2500);
     } catch (err) {
-      console.log("[fork] failed:", String(err));
       setUiToast({ text: `派生失败：${err instanceof Error ? err.message : String(err)}`, type: "error" });
       if (uiToastTimer.current) clearTimeout(uiToastTimer.current);
       uiToastTimer.current = setTimeout(() => setUiToast(null), 4000);
@@ -965,7 +974,7 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
     const sid = state.activeId;
     const loadingId = nextId();
     setCompacting(true);
-    dispatch({ type: "localSystem", id: loadingId, text: "正在压缩上下文…" });
+    dispatch({ type: "localSystem", id: loadingId, text: tr("正在压缩上下文…") });
     try {
       const result = (await client.request("session.compact", { sessionId: sid })) as { estimatedTokensAfter?: number };
       // Drop the loading marker, then show the post-compaction token count.
@@ -1084,7 +1093,15 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
   };
 
   // Sidebar collapsed → chat/welcome content widens to reclaim the space.
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Mirrors the sidebar's persisted collapse state so the chat pane widens
+  // correctly on load (sidebar restores collapsed=true from localStorage).
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("vagus.sidebar.collapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
   const sidebarProps = {
     sessions,
     activePath,
@@ -1149,7 +1166,8 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
         <div style={{ flex: 1, display: "flex", flexDirection: "row", minWidth: 0 }}>
           <SessionSidebar {...sidebarProps} />
           <ChatPane
-            wide={sidebarCollapsed}            items={active.items}
+            wide={sidebarCollapsed}
+            items={active.items}
             busy={active.busy}
             turnStartTs={active.turnStart}
             sessionLoading={sessionLoading}

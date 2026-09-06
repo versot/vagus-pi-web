@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useAppearance, useTheme, useTokens } from "@vagus/ui-tokens";
+import { tr } from "@vagus/ui-shared";
+import { useAppearance, useI18n, useTheme, useTokens } from "@vagus/ui-tokens";
 import type { AppearanceSettings, ProviderConfigUI, UsageStatsUI } from "@vagus/ui-tokens";
 import { ModelsView } from "./models-view.js";
 import { AppearanceView } from "./appearance-view.js";
@@ -44,6 +45,9 @@ interface SettingsViewProps {
 export function SettingsView({ providers, usageStats, onClose, onSave, onRefresh, onTest, cat, onCatChange, onProbe, request, projectCwd }: SettingsViewProps): JSX.Element {
   const t = useTokens();
   const appearance = useAppearance();
+  // Subscribe to the locale so a language switch re-renders this shell
+  // immediately (the tr() calls here are plain function reads).
+  useI18n();
 
   // Appearance *font/display* settings are edited as a draft and committed
   // when the user clicks 返回 — the settings page itself does not resize
@@ -91,35 +95,35 @@ export function SettingsView({ providers, usageStats, onClose, onSave, onRefresh
         padding: "20px 12px", display: "flex", flexDirection: "column", gap: 4, overflowY: "auto",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 10px 14px" }}>
-          <span style={{ fontSize: 15, fontWeight: 600, color: t.color.fg }}>设置</span>
-          <button onClick={commitAndClose} style={{ marginLeft: "auto", border: "none", background: "none", color: t.color.muted, fontSize: 12, cursor: "pointer" }}>← 返回</button>
+          <span style={{ fontSize: 15, fontWeight: 600, color: t.color.fg }}>{tr("设置")}</span>
+          <button onClick={commitAndClose} style={{ marginLeft: "auto", border: "none", background: "none", color: t.color.muted, fontSize: 12, cursor: "pointer" }}>{tr("← 返回")}</button>
         </div>
 
-        <div style={catLabel}>基础设置</div>
+        <div style={catLabel}>{tr("基础设置")}</div>
         <div style={navItem(cat === "appearance")} onClick={() => onCatChange("appearance")}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
-          外观
+          {tr("外观")}
         </div>
 
         <div style={navItem(cat === "models")} onClick={() => onCatChange("models")}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><circle cx="12" cy="12" r="3"/></svg>
-          模型设置
+          {tr("模型设置")}
         </div>
 
-        <div style={catLabel}>Agents 能力</div>
+        <div style={catLabel}>{tr("Agents 能力")}</div>
         <div style={navItem(cat === "mcp")} onClick={() => onCatChange("mcp")}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 20h4l10-10a2.83 2.83 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
-          MCP 服务器
+          {tr("MCP 服务器")}
         </div>
         <div style={navItem(cat === "skills")} onClick={() => onCatChange("skills")}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M14.7 6.3a4.5 4.5 0 0 0-6.4 6.4L3 18v3h3l5.3-5.3a4.5 4.5 0 0 0 6.4-6.4l-3 3-2.3-2.3 3-3z"/></svg>
-          技能
+          {tr("技能")}
         </div>
 
-        <div style={catLabel}>数据与统计</div>
+        <div style={catLabel}>{tr("数据与统计")}</div>
         <div style={navItem(cat === "usage")} onClick={() => onCatChange("usage")}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
-          使用统计
+          {tr("使用统计")}
         </div>
       </aside>
 
