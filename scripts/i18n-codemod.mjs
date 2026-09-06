@@ -14,7 +14,7 @@
  *
  * Usage: node scripts/i18n-codemod.mjs [--dry]
  */
-import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,7 +28,6 @@ const TARGET_DIRS = [
   "packages/ui-settings/src",
   "packages/web/src",
 ];
-const HAS_CN = /[\u4e00-\u9fa5]/;
 
 function walk(dir, out = []) {
   for (const f of readdirSync(dir, { withFileTypes: true })) {
@@ -51,7 +50,7 @@ for (const dir of TARGET_DIRS) {
 
     // 1. JSX text attributes with Chinese values → {tr("...")}
     out = out.replace(
-      /\b(label|hint|title|description|placeholder|confirmLabel|cancelLabel)=(\")([^\"]*[\u4e00-\u9fa5][^\"]*)(\")/g,
+      /\b(label|hint|title|description|placeholder|confirmLabel|cancelLabel)=(")([^"]*[\u4e00-\u9fa5][^"]*)(")/g,
       (m, attr, q, val) => {
         totalAttrs++;
         return `${attr}={tr(${q}${val}${q})}`;

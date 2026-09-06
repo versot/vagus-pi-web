@@ -33,7 +33,6 @@ for (const dir of TARGET_DIRS) {
     // References t( but doesn't import it, and doesn't define a local t
     const usesT = /\btr\(/.test(src);
     const importsT = /import\s*\{[^}]*\btr\b[^}]*\}\s*from/.test(src);
-    const localT = /(const|function)\s+t\s*[=(]/.test(src) || /, t\b|t,/.test(src) && /t: ReturnType/.test(src);
     if (!usesT || importsT || /const tk = useTokens/.test(src)) {
       // files with `const tk = useTokens()` shadow t — rename those to tokens
       if (usesT && /const tk = useTokens\(\)/.test(src)) {

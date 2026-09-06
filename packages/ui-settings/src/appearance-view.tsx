@@ -4,7 +4,7 @@ import { useI18n, useTheme } from "@vagus/ui-tokens";
 import { tr } from "@vagus/ui-shared";
 import type { useTokens } from "@vagus/ui-tokens";
 import type { AppearanceSettings } from "@vagus/ui-tokens";
-import {codePaletteFor, highlightLine, t} from "@vagus/ui-shared";
+import {codePaletteFor, highlightLine} from "@vagus/ui-shared";
 import { Section, SettingRow, Segmented, Switch, SizeStepper } from "./shared.js";
 
 const CODE_SAMPLE_LINES = [
