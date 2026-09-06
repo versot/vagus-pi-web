@@ -77,7 +77,8 @@ export type SessionStoreAction =
   | { type: "toggleCollapse"; id: number }
   | { type: "forceIdle" }
   | { type: "moveWelcome"; sessionId: string }
-  | { type: "userMessage"; sessionId: string; id: number; text: string; skillTag?: string; images?: Array<{ dataUrl: string; mimeType: string }> };
+  | { type: "userMessage"; sessionId: string; id: number; text: string; skillTag?: string; images?: Array<{ dataUrl: string; mimeType: string }> }
+  | { type: "queueRemove"; sessionId: string; text: string };
 
 function slotId(state: SessionStoreState): string {
   return state.activeId ?? WELCOME_SLOT;
@@ -124,6 +125,13 @@ function updateSlot(state: SessionStoreState, id: string, update: (slot: Session
         ...slot,
         items: chatReducer(slot.items, { type: "removeMessage", id: action.id }),
       }));
+    case "queueRemove": {
+      // Optimistic removal (session.cancelQueued RPC fired in parallel) —
+      // the authoritative session.queue_update event may lag a round-trip.
+      const slot = state.slots[action.sessionId];
+      if (!slot) return state;
+      return { ...state, slots: { ...state.slots, [action.sessionId]: { ...slot, queued: slot.queued.filter((q) => q.text !== action.text) } } };
+    }
     case "userMessage":
       return updateSlot(state, action.sessionId, (slot) => ({
         ...slot,

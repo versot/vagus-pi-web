@@ -77,7 +77,8 @@ interface InputBarProps {
   selectedModel?: string;
   /** User messages queued while the agent is busy (shown as a rail). */
   queuedMessages?: Array<{ id: number; text: string }>;
-  /** Cancel a queued message. */
+  /** Cancel a queued message (remove it from pi's steering queue). */
+  onCancelQueued?: (text: string) => void;
 }
 
 function fmt(n: number): string {
@@ -86,7 +87,7 @@ function fmt(n: number): string {
   return String(Math.round(n));
 }
 
-export function InputBar({ value, onChange, onSubmit, usage, providers, onSwitchModel, onSetThinking, thinkingLevel = "off", permissionMode, onTogglePermission, attachments = [], fileAttachments = [], onAttach, onRemoveAttachment, onCommand, commands = [], onPickCommand, onRefreshCommands, focusSignal, busy = false, hasPendingDialog = false, onRestoreDialog, onStop, selectedModel, queuedMessages = [], dock }: InputBarProps): JSX.Element {
+export function InputBar({ value, onChange, onSubmit, usage, providers, onSwitchModel, onSetThinking, thinkingLevel = "off", permissionMode, onTogglePermission, attachments = [], fileAttachments = [], onAttach, onRemoveAttachment, onCommand, commands = [], onPickCommand, onRefreshCommands, focusSignal, busy = false, hasPendingDialog = false, onRestoreDialog, onStop, selectedModel, queuedMessages = [], dock, onCancelQueued }: InputBarProps): JSX.Element {
   const t = useTokens();
   const [menuOpen, setMenuOpen] = useState(false);
   // Inline "/" command dropdown state (open + keyboard selection index).
@@ -262,6 +263,17 @@ export function InputBar({ value, onChange, onSubmit, usage, providers, onSwitch
             <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 8, height: 30, padding: "0 12px 0 8px", borderRadius: 9, background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.18)", fontSize: "0.86em", color: t.color.fg }}>
               <span style={{ fontSize: "0.7em", fontWeight: 700, color: "#6366f1", background: "rgba(99,102,241,0.12)", width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{idx + 1}</span>
               <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.text}</span>
+              {onCancelQueued && (
+                <button
+                  onClick={() => onCancelQueued(q.text)}
+                  title={tr("取消这条消息")}
+                  style={{ width: 18, height: 18, borderRadius: "50%", border: "none", background: "transparent", color: t.color.muted, cursor: "pointer", fontSize: "0.72em", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, padding: 0, transition: "background 0.15s, color 0.15s" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(229,72,77,0.15)"; e.currentTarget.style.color = "#E5484D"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = t.color.muted; }}
+                >
+                  ✕
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -575,7 +587,11 @@ export function InputBar({ value, onChange, onSubmit, usage, providers, onSwitch
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
             <path d="M12 4.5a2.5 2.5 0 0 0-4.96-.46 2.5 2.5 0 0 0-1.98 3 2.5 2.5 0 0 0-1.32 4.24 3 3 0 0 0 .34 5.58 2.5 2.5 0 0 0 2.96 3.08A2.5 2.5 0 0 0 12 19.5a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 12 4.5z"/>
           </svg>
-          {thinkingLevel === "off" ? "思考关闭" : "思考中"}
+          {/* Fixed 4-char width: "思考中"(3) vs "思考关闭"(4) would otherwise
+              resize the button on every toggle, shoving the chips to its left. */}
+          <span style={{ display: "inline-block", width: "4em", textAlign: "center" }}>
+            {thinkingLevel === "off" ? "思考关闭" : "思考中"}
+          </span>
         </button>
 
         {/* send / stop / pending-dialog */}

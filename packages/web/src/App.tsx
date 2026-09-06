@@ -1097,6 +1097,12 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
     onPickCommand: () => {},
     focusSignal,
     queuedMessages: active.queued,
+    onCancelQueued: (text: string) => {
+      // Remove from pi's steering queue; session.queue_update (authoritative)
+      // will rebuild the rail. Optimistically drop it for instant feedback.
+      void client?.request("session.cancelQueued", { sessionId: state.activeId, text });
+      dispatch({ type: "queueRemove", sessionId: state.activeId ?? "", text });
+    },
   };
 
   // Sidebar collapsed → chat/welcome content widens to reclaim the space.

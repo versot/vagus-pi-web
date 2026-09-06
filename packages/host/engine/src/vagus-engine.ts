@@ -1368,18 +1368,41 @@ export class VagusEngine {
     await session.steer(text);
   }
 
-  /** Cancels a queued message by removing it from pi's steering queue. */
+  /** Cancels a queued message by removing it from pi's steering queue.
+   *  pi keeps TWO queues in sync: AgentSession._steeringMessages (display
+   *  tracking) and Agent.steeringQueue.messages (the real send queue —
+   *  clearing only the former still delivers the message). Remove from both;
+   *  match by message text on the agent queue (AgentMessage.content text). */
   async cancelQueuedMessage(sessionId: string, text: string): Promise<{ cancelled: boolean }> {
-    const session = this.requireSession(sessionId);
-    const msgs = (session as unknown as Record<string, unknown>)['_steeringMessages'] as string[] | undefined;
+    const session = this.requireSession(sessionId) as unknown as Record<string, unknown>;
+    let cancelled = false;
+    // 1) display tracking (drives queue_update events)
+    const msgs = session['_steeringMessages'] as string[] | undefined;
     if (msgs) {
       const idx = msgs.indexOf(text);
       if (idx !== -1) {
         msgs.splice(idx, 1);
-        return { cancelled: true };
+        cancelled = true;
       }
     }
-    return { cancelled: false };
+    // 2) the REAL queue inside the agent loop — without this the message
+    //    still gets drained and sent on the next loop iteration.
+    const agent = session['agent'] as { steeringQueue?: { messages: Array<{ content: Array<{ type: string; text?: string }> }> } } | undefined;
+    const q = agent?.steeringQueue;
+    if (q?.messages) {
+      const idx = q.messages.findIndex((m) => m.content.some((c) => c.type === "text" && c.text === text));
+      if (idx !== -1) {
+        q.messages.splice(idx, 1);
+        cancelled = true;
+      }
+    }
+    if (cancelled) {
+      // Re-emit authoritative queue state so GUI rails rebuild everywhere.
+      // (eslint-disable: pi names this private method with a leading underscore.)
+      // eslint-disable-next-line no-underscore-dangle
+      (session as unknown as { _emitQueueUpdate?: () => void })._emitQueueUpdate?.();
+    }
+    return { cancelled };
   }
 
   /**

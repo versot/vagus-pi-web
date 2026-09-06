@@ -12,6 +12,8 @@ import type { ProviderConfigUI } from "@vagus/ui-tokens";
 export interface InputCardProps {
   /** Extension status/widget dock slot (footer row, left of model picker). */
   dock?: React.ReactNode;
+  /** Cancel a queued (steering) message. */
+  onCancelQueued?: (text: string) => void;
   variant: "welcome" | "chat";
   value: string;
   onChange: (v: string) => void;
@@ -104,6 +106,7 @@ export function InputCard(props: InputCardProps): JSX.Element {
         hasPendingDialog={props.hasPendingDialog}
         onRestoreDialog={props.onRestoreDialog}
         queuedMessages={props.queuedMessages}
+        onCancelQueued={props.onCancelQueued}
         dock={props.dock}
       />
     </div>

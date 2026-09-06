@@ -87,17 +87,14 @@ export function useAutoscroll(itemsCount: number, activeId: string | undefined) 
   useEffect(() => {
     lastItemCountRef.current = 0;
     scrollLockedRef.current = false; // fresh context — drop any user scroll lock
-    let raf1 = 0;
-    let raf2 = 0;
-    raf1 = requestAnimationFrame(() => {
-      scrollToAbsolute(false);
-      raf2 = requestAnimationFrame(() => scrollToAbsolute(false));
-    });
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-    };
-  }, [activeId]);
+    // forceScrollToBottom (not plain scrollToAbsolute): content-visibility
+    // estimates settle into real layout AFTER the first frames, moving the
+    // bottom further down — the chaser re-reads the target until 2 stable
+    // frames. chatEpoch in deps covers remounts (settings/plugins views
+    // unmount ChatPane; returning must snap to bottom just like a switch).
+    const raf = requestAnimationFrame(() => forceScrollToBottom(false));
+    return () => cancelAnimationFrame(raf);
+  }, [activeId, chatEpoch]);
 
   // Scroll when the timeline grows (a new message arrived). Toggling a
   // thinking/tool card also changes item count, but not in a growing way
