@@ -650,6 +650,9 @@ export async function runDaemon(): Promise<number> {
       return host.followUpSession(requireString(sessionId, "sessionId"), requireString(text, "text"));
     });
 
+    // OS-native folder picker on the daemon host (Windows dialog / macOS
+    // osascript / Linux zenity+kdialog). Returns the chosen path or null.
+    srv.registerMethod("project.pickNative", () => host.pickNativeDirectory());
     // Cancel a message still waiting in the steering queue (by exact text).
     srv.registerMethod("session.cancelQueued", (params) => {
       const { sessionId, text } = (params ?? {}) as { sessionId?: unknown; text?: unknown };

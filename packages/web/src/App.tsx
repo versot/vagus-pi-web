@@ -3,7 +3,7 @@ import { tr } from "@vagus/ui-shared";
 import type { Transport } from "@vagus/ui-shared";
 import type { JsonRpcClient } from "@vagus/ui-shared";
 import { SessionSidebar } from "@vagus/ui-sidebar";
-import { FolderPicker, CommandPicker } from "@vagus/ui-input";
+import { CommandPicker } from "@vagus/ui-input";
 import type { ProjectOption, CommandInfo } from "@vagus/ui-input";
 import type { Category } from "@vagus/ui-settings";
 import { useAppearance, useTokens } from "@vagus/ui-tokens";
@@ -195,7 +195,6 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
     }
   }, [activeWidgets]); // eslint-disable-line react-hooks/exhaustive-deps
   const [activeProject, setActiveProject] = useState<string | undefined>();
-  const [pickerOpen, setPickerOpen] = useState(false);
   /** Slash-command palette (builtin + extension + skill + template) for the "/" dropdown. */
   const [commands, setCommands] = useState<CommandInfo[]>(WEB_BUILTIN_COMMANDS);
   /** Increment to focus the input bar (session switch / returning from settings). */
@@ -921,7 +920,6 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
   }, []);
 
   const pickFolder = async (path: string | null): Promise<void> => {
-    setPickerOpen(false);
     if (!path || !client) return;
     setActiveProject(path);
     localStorage.setItem("vagus.activeProject", path);
@@ -1014,17 +1012,7 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
     }
   };
 
-  // ── folder picker / command picker RPCs ────────────────────────────────
-  const roots = async (): Promise<{ places: { name: string; path: string; isDirectory: boolean }[]; drives: { name: string; path: string; isDirectory: boolean }[] }> => {
-    if (!client) return { places: [], drives: [] };
-    return (await client.request("project.roots", {})) as { places: { name: string; path: string; isDirectory: boolean }[]; drives: { name: string; path: string; isDirectory: boolean }[] };
-  };
-
-  const listDir = async (dir: string): Promise<{ path: string; entries: { name: string; path: string; isDirectory: boolean }[] }> => {
-    if (!client) return { path: dir, entries: [] };
-    return (await client.request("project.listDir", { dir })) as { path: string; entries: { name: string; path: string; isDirectory: boolean }[] };
-  };
-
+  // ── command picker RPC ─────────────────────────────────────────────────
   /** Fetches the full command palette from the daemon (extension + template + skill) + merges builtins. */
   const listCommands = async (): Promise<CommandInfo[]> => {
     if (!client) return WEB_BUILTIN_COMMANDS;
@@ -1172,7 +1160,7 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
         /* 欢迎页：侧栏 + 品牌问候区 + 项目选择器 + 输入卡 */
         <div style={{ flex: 1, display: "flex", flexDirection: "row", minWidth: 0 }}>
           <SessionSidebar {...sidebarProps} />
-          <WelcomePane wide={sidebarCollapsed} activeProject={activeProject} projects={projects} onSelectProject={selectProject} onNewProject={() => setPickerOpen(true)} inputCard={inputCard} dockStatuses={uiStatuses} dockWidgets={aboveEditorWidgets} toast={toastNode} />
+          <WelcomePane wide={sidebarCollapsed} activeProject={activeProject} projects={projects} onSelectProject={selectProject} onNewProject={client ? () => { void (async () => { try { const r = (await client.request("project.pickNative", {})) as { path: string | null }; if (r.path) void pickFolder(r.path); } catch { /* system picker unavailable (headless daemon) — no browse fallback left */ } })(); } : () => {}} inputCard={inputCard} dockStatuses={uiStatuses} dockWidgets={aboveEditorWidgets} toast={toastNode} />
         </div>
       ) : (
         /* 对话页：侧栏 + 聊天流 + 右视图（可插拔） */
@@ -1235,7 +1223,6 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
         </div>
       )}
 
-      {pickerOpen && <FolderPicker listDir={listDir} roots={roots} onPick={(p) => void pickFolder(p)} />}
 
       {commandOpen && <CommandPicker commands={commands} onPick={pickCommand} />}
 

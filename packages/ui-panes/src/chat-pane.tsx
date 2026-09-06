@@ -331,7 +331,6 @@ export function ChatPane(props: {
                       files={group.files}
                       onOpenFile={props.onOpenFile}
                       onRevertAll={() => props.onRevertAll(group.files.map((f) => f.file))}
-                      onExpand={(open) => { if (open) props.autoscroll.forceScrollToBottom(true, 400); }}
                     />
                   </div>,
                 );

@@ -1,3 +1,15 @@
+import { spawn } from "node:child_process";
+
+/** Spawn a process, capture stdout + exit code (never throws). */
+function runCapture(cmd: string, args: string[]): Promise<{ stdout: string; code: number }> {
+  return new Promise((res) => {
+    const child = spawn(cmd, args, { windowsHide: true });
+    let stdout = "";
+    child.stdout?.on("data", (d: Buffer) => { stdout += String(d); });
+    child.on("error", () => res({ stdout, code: 1 }));
+    child.on("close", (code) => res({ stdout, code: code ?? 1 }));
+  });
+}
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
 import type {
   AgentSession,
@@ -1403,6 +1415,52 @@ export class VagusEngine {
       (session as unknown as { _emitQueueUpdate?: () => void })._emitQueueUpdate?.();
     }
     return { cancelled };
+  }
+
+  /**
+   * Opens the OS-native folder picker on the daemon host and returns the
+   * chosen path (null = user cancelled / unsupported platform). Windows uses
+   * the FolderBrowserDialog via PowerShell (zero deps, -STA so the dialog
+   * works, TopMost host so it isn't buried behind other windows); macOS uses
+   * osascript; Linux tries zenity then kdialog.
+   */
+  async pickNativeDirectory(): Promise<{ path: string | null }> {
+    const platform = process.platform;
+    if (platform === "win32") {
+      const ps =
+        "Add-Type -AssemblyName System.Windows.Forms;" +
+        "$host2 = New-Object System.Windows.Forms.Form -Property @{TopMost=$true; ShowInTaskbar=$false};" +
+        "$f = New-Object System.Windows.Forms.FolderBrowserDialog;" +
+        "$f.ShowNewFolderButton = $true;" +
+        "if ($f.ShowDialog($host2) -eq [System.Windows.Forms.DialogResult]::OK) { $f.SelectedPath }";
+      const { stdout } = await runCapture("powershell", ["-NoProfile", "-STA", "-Command", ps]);
+      const p = stdout.trim();
+      return { path: p === "" ? null : p };
+    }
+    if (platform === "darwin") {
+      const script = [
+        "try",
+        "with timeout of 3600 seconds",
+        'set selectedFolder to choose folder with prompt "选择工作目录"',
+        "POSIX path of selectedFolder",
+        "on error number -128",
+        'return ""',
+        "end try",
+      ].join("\n");
+      const { stdout, code } = await runCapture("osascript", ["-e", script]);
+      const p = stdout.trim().replace(/\/$/, "");
+      return { path: code === 0 && p !== "" ? p : null };
+    }
+    if (platform === "linux") {
+      let { stdout, code } = await runCapture("zenity", ["--file-selection", "--directory", "--title=选择工作目录"]);
+      if (code === 127) {
+        ({ stdout, code } = await runCapture("kdialog", ["--getexistingdirectory", ".", "--title", "选择工作目录"]));
+        if (code === 127) throw new Error("未找到 zenity 或 kdialog，无法打开系统目录选择器（请在服务器上安装 zenity）");
+      }
+      const p = stdout.trim();
+      return { path: code === 0 && p !== "" ? p : null };
+    }
+    throw new Error(`系统目录选择器不支持在 ${platform} 上运行`);
   }
 
   /**
