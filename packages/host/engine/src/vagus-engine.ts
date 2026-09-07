@@ -21,7 +21,8 @@ import type {
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { randomUUID } from "node:crypto";
-import { appendFileSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, copyFileSync, createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { createInterface } from "node:readline";
 import type { EventBus } from "@vagus/host-events";
 import type { CoreEventMap } from "@vagus/host-events";
 import type { SessionHistoryItem, SessionMessage, UsageStats } from "@vagus/protocol";
@@ -101,6 +102,11 @@ export class VagusEngine {
    * own diff at tool end for tools that don't return pi's details.diff (e.g. write).
    */
   private readonly toolBaselines = new Map<string, { path: string; content: string }>();
+  /** Reused resource loaders keyed by (cwd|agentDir|settings-stamp) — the
+   *  loader binds a settingsManager, so the settings stamp is part of the key:
+   *  a settings edit invalidates the cache automatically, and every session
+   *  open no longer rebuilds skills/extensions context from scratch. */
+  private readonly resourceLoaderCache = new Map<string, { loader: DefaultResourceLoader }>();
   /**
    * Per-session file baselines for revert: sessionId → absPath → content as it
    * was BEFORE this session's first edit of that file. `exists: false` means
@@ -115,6 +121,9 @@ export class VagusEngine {
 
   constructor(private readonly options: VagusEngineOptions) {
     this.uiBridge = new ExtensionUiBridge(this.options.bus, () => this.agentDirPath());
+    // Warm the model runtime in the background — the first session.open
+    // otherwise pays ModelRuntime.create() synchronously on the click.
+    void this.resolveRuntime().catch(() => {});
   }
 
   /**
@@ -388,27 +397,142 @@ export class VagusEngine {
    * first). Wraps `SessionManager.list`, which reads the JSONL session files
    * on disk — the GUI session tree is backed by real pi history.
    */
+  /** Background-build resource loaders for the given cwds so the first
+   *  session open in each workspace hits the loader cache. Fire-and-forget;
+   *  failures are ignored (the open path will build on demand). */
+  private async prewarmLoaders(cwds: string[]): Promise<void> {
+    const agentDir = this.options.engineDir ?? process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
+    const disabled = this.options.disabledSkills?.() ?? [];
+    const builtinExts = this.options.builtinExtensionPaths ?? [];
+    const unique = [...new Set(cwds.filter((c) => typeof c === "string" && c.length > 0))];
+    const stamp = this.settingsStamp(agentDir);
+    await Promise.allSettled(
+      unique.map(async (cwd) => {
+        const key = cwd + "|" + agentDir + "|" + disabled.length + "|" + builtinExts.length + "|" + stamp;
+        if (this.resourceLoaderCache.has(key)) return;
+        if (disabled.length === 0 && builtinExts.length === 0) return; // nothing to build
+        const settingsManager = SettingsManager.create(cwd, agentDir);
+        const disabledSet = new Set(disabled);
+        const loader = new DefaultResourceLoader({
+          cwd,
+          agentDir,
+          settingsManager,
+          additionalExtensionPaths: builtinExts.length > 0 ? builtinExts : undefined,
+          ...(disabled.length > 0
+            ? {
+                skillsOverride: (result) => ({
+                  ...result,
+                  skills: result.skills.filter((skill) => !disabledSet.has(skill.name)),
+                }),
+              }
+            : {}),
+        });
+        await loader.reload();
+        this.resourceLoaderCache.set(key, { loader });
+      }),
+    );
+  }
+
+  /** Lightweight sidebar-history listing: streams each session JSONL once,
+   *  keeping only what the UI shows (header, message count, first user text,
+   *  last activity). Cached 5s — pi's listAll() builds an allMessagesText
+   *  blob per file we never consume, which dominated the sidebar's cost. */
   async listHistory(cwd?: string): Promise<SessionHistoryItem[]> {
     try {
-      // List across ALL project dirs (the sidebar groups by cwd). The cwd
-      // arg is kept for API compat but pi's listAll covers every workspace.
-      const infos = await SessionManager.listAll();
-      return infos
-        .filter((info) => (cwd === undefined ? true : info.cwd === cwd))
-        .map((info) => ({
-          id: info.id,
-          path: info.path,
-          name: info.name,
-          cwd: info.cwd,
-          created: info.created.toISOString(),
-          modified: info.modified.toISOString(),
-          messageCount: info.messageCount,
-          firstMessage: info.firstMessage,
-        }));
+      const sessionsDir = join(this.agentDirPath(), "sessions");
+      const all: SessionHistoryItem[] = [];
+      if (existsSync(sessionsDir)) {
+        for (const projDir of readdirSync(sessionsDir, { withFileTypes: true })) {
+          if (!projDir.isDirectory() && !projDir.isSymbolicLink()) continue;
+          const dirPath = join(sessionsDir, projDir.name);
+          let files: string[];
+          try { files = readdirSync(dirPath).filter((f) => f.endsWith(".jsonl")); } catch { continue; }
+          for (const file of files) {
+            const item = await this.readSessionInfoLight(join(dirPath, file));
+            if (item) all.push(item);
+          }
+        }
+      }
+      // Newest first (same ordering as pi's sidebar).
+      all.sort((a, b) => (a.modified < b.modified ? 1 : a.modified > b.modified ? -1 : 0));
+      // Prewarm resource loaders for every project the user can click — the
+      // first open of a NEW workspace still pays the loader build; kick it off
+      // now (background) so by the time the user clicks, it's usually cached.
+      void this.prewarmLoaders(all.map((i) => i.cwd));
+      return cwd === undefined ? all : all.filter((i) => i.cwd === cwd);
     } catch {
-      // No sessions yet (fresh pi store) — treat as empty history.
       return [];
     }
+  }
+
+  /** Fingerprint of the session settings file (mtime+size) — the resource
+   *  loader binds a settingsManager, so a settings change must invalidate the
+   *  cached loader instead of serving stale skills/extension config. */
+  private settingsStamp(agentDir: string): string {
+    try {
+      const p = join(agentDir, "settings.json");
+      const st = statSync(p);
+      return st.mtimeMs + ":" + st.size;
+    } catch {
+      return "none";
+    }
+  }
+  /** Stream a single session file, extracting only sidebar-visible fields. */
+  private async readSessionInfoLight(file: string): Promise<SessionHistoryItem | undefined> {
+    let header: { id?: unknown; cwd?: unknown; name?: unknown; timestamp?: unknown; parentSession?: unknown } | undefined;
+    let cwd = "";
+    let name: string | undefined;
+    let id = "";
+    let createdTs = 0;
+    let modifiedTs = 0;
+    let messageCount = 0;
+    let firstMessage = "";
+    try {
+      const rl = createInterface({ input: createReadStream(file, { encoding: "utf8" }), crlfDelay: Infinity });
+      for await (const line of rl) {
+        if (line.trim() === "") continue;
+        let e: { type?: unknown; timestamp?: unknown; message?: { role?: unknown; text?: unknown; content?: unknown } } | undefined;
+        try { e = JSON.parse(line) as typeof e; } catch { continue; }
+        if (!e) continue;
+        if (!header) {
+          if (e.type !== "session") return undefined; // not a session file — skip
+          const h = e as { id?: unknown; cwd?: unknown; name?: unknown; timestamp?: unknown };
+          header = h;
+          cwd = typeof h.cwd === "string" ? h.cwd : "";
+          name = typeof h.name === "string" && h.name.trim() !== "" ? h.name.trim() : undefined;
+          id = typeof h.id === "string" ? h.id : "";
+          createdTs = typeof h.timestamp === "string" ? new Date(h.timestamp).getTime() : NaN;
+          continue;
+        }
+        const ts = typeof e.timestamp === "string" ? new Date(e.timestamp).getTime() : NaN;
+        if (Number.isFinite(ts)) modifiedTs = Math.max(modifiedTs, ts);
+        if (e.type !== "message" || !e.message) continue;
+        messageCount++;
+        const m = e.message;
+        if (m.role === "user" && !firstMessage) {
+          let text = "";
+          if (typeof m.text === "string") text = m.text;
+          else if (typeof m.content === "string") text = m.content;
+          else if (Array.isArray(m.content)) for (const c of m.content) if (c && (c as { type?: string }).type === "text") text += String((c as { text?: unknown }).text ?? "");
+          firstMessage = text.replace(/\s+/g, " ").trim().slice(0, 200);
+        }
+      }
+    } catch {
+      return undefined;
+    }
+    const hdr = header;
+    if (!hdr) return undefined;
+    const modifiedIso = Number.isFinite(modifiedTs) && modifiedTs > 0 ? new Date(modifiedTs) : Number.isFinite(createdTs) ? new Date(createdTs) : statSync(file).mtime;
+    return {
+      id,
+      path: file,
+      name,
+      cwd,
+      created: new Date(Number.isFinite(createdTs) ? createdTs : Date.now()).toISOString(),
+      modified: modifiedIso.toISOString(),
+      messageCount,
+      firstMessage: firstMessage || "(no messages)",
+    };
   }
 
   /**
@@ -436,8 +560,13 @@ export class VagusEngine {
     // loader (reads settings.json + default discovery paths).
     const disabled = this.options.disabledSkills?.() ?? [];
     const builtinExts = this.options.builtinExtensionPaths ?? [];
+    // Reuse the resource loader built for this (cwd, agentDir) — rebuilding
+    // settings/skills/package context on every session open was the dominant
+    // first-click cost.
     let resourceLoader: DefaultResourceLoader | undefined;
-    if (disabled.length > 0 || builtinExts.length > 0) {
+    const loaderKey = options.cwd + "|" + agentDir + "|" + disabled.length + "|" + builtinExts.length + "|" + this.settingsStamp(agentDir);
+    resourceLoader = this.resourceLoaderCache.get(loaderKey)?.loader;
+    if (!resourceLoader && (disabled.length > 0 || builtinExts.length > 0)) {
       const settingsManager = SettingsManager.create(options.cwd, agentDir);
       const disabledSet = new Set(disabled);
       const loader = new DefaultResourceLoader({
@@ -459,6 +588,7 @@ export class VagusEngine {
       });
       await loader.reload();
       resourceLoader = loader;
+      this.resourceLoaderCache.set(loaderKey, { loader });
     }
 
     const { session } = await factory({
@@ -2001,7 +2131,15 @@ export class VagusEngine {
   private async resolveRuntime(): Promise<ModelRuntime> {
     if (this.options.modelRuntime) return this.options.modelRuntime;
     // Created once per process; reuses the user's existing pi auth/models.
-    this.runtimePromise ??= ModelRuntime.create();
+    // On failure we clear the promise so the NEXT call retries (a transient
+    // network/auth failure must not poison every later session open).
+    if (!this.runtimePromise) {
+      const p = ModelRuntime.create();
+      this.runtimePromise = p.then(
+        (r) => r,
+        (err: unknown) => { this.runtimePromise = undefined; throw err; },
+      );
+    }
     return this.runtimePromise;
   }
 }

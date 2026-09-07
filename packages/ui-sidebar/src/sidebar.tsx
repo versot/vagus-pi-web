@@ -476,33 +476,6 @@ export function SessionSidebar({
           );
         })}
 
-        {/* 最近 */}
-        {groups.length > 0 && (
-          <>
-            <div style={{ fontSize: "0.79em", fontWeight: 600, color: t.color.muted, textTransform: "uppercase", letterSpacing: "0.08em", padding: "16px 10px 6px" }}>{tr("最近")}</div>
-            <div style={{ paddingLeft: 0 }}>
-              {sessions.slice(0, 5).map((s) => (
-                <div
-                  key={s.id}
-                  onClick={() => onOpenSession(s.path)}
-                  onContextMenu={(e) => onContextMenu(e, s)}
-                  onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = t.color.sidebarHover}
-                  onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 7,
-                    padding: "6px 10px", borderRadius: 10, cursor: "pointer", userSelect: "none",
-                    fontSize: "0.91em", color: t.color.muted, overflow: "hidden", whiteSpace: "nowrap",
-                    transition: ROW_TRANSITION,
-                  }}
-                >
-                  <BubbleIcon />
-                  <Marquee text={s.name ?? s.firstMessage.slice(0, 40)} />
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
         <ArchiveSection
           archivedProjects={archivedProjects}
           busyPaths={busyPaths}

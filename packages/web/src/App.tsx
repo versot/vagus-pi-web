@@ -322,12 +322,13 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
 
     openSessionLoadingRef.current++;
     setSessionLoading(true);
-    // Clear the pane immediately + show the loading hint — the user sees
-    // feedback on click, not after the RPC round-trip.
-    dispatch({ type: "clearActive" });
-    setShowLoading(true);
+    // Keep the CURRENT conversation on screen while the new one loads —
+    // no clearActive() empty flash. The sidebar/header highlight flips to
+    // the clicked session immediately (setActivePath), and loadHistory +
+    // activate below are dispatched back-to-back so React 18 batches them
+    // into ONE render: old view → new view, no blank intermediate frame.
+    setActivePath(path);
     try {
-      setActivePath(path);
       const result = (await c.request("session.open", { sessionFile: path, limit: 200 })) as SessionOpenResult;
       // A newer click superseded this one — cache the messages but don't
       // steal the active session (prevents the UI jumping back/forth).
@@ -345,13 +346,17 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
       if (!loadedSlot || loadedSlot.items.length === 0) {
         dispatch({ type: "loadHistory", sessionId: sid, id: nextId(), messages: result.messages, hasMore: result.hasMore, total: result.total, startIndex: result.startIndex });
       }
-      autoscroll.resetSnap(); // session switch — snap to bottom, don't animate
+      // BATCH: activate immediately follows loadHistory in the same tick —
+      // React renders the fully-loaded session in one pass (no empty flash).
       dispatch({ type: "activate", sessionId: sid });
+      autoscroll.resetSnap(); // session switch — snap to bottom, don't animate
       if (result.sessionFile) setActivePath(result.sessionFile);
       fetchSessionInfo(c, sid);
       void refreshHistory(c);
       setFocusSignal((n) => n + 1); // focus the input bar after switching
     } catch (err) {
+      // Stay on the current session — the clicked one failed to load.
+      // Show the error inline so the click isn't silently swallowed.
       dispatch({
         type: "localSystem",
         id: nextId(),

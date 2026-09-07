@@ -188,11 +188,14 @@ function applyEventToSlot(slot: SessionSlot, id: number, event: DomainEvent): Se
       }
       // Turn fully done — stamp the work block with its total duration.
       if (slot.turnStart !== undefined) {
-        const items = chatReducer(slot.items, {
+        // Agent genuinely finished: stamp the turn duration, then collapse
+        // the turn's work content (the auto-open during streaming is over).
+        let items = chatReducer(slot.items, {
           type: "turnEnd",
           startedAt: slot.turnStart,
           endedAt: Date.now(),
         });
+        items = chatReducer(items, { type: "collapseAll" });
         return { ...slot, busy: false, turnStart: undefined, items };
       }
       return { ...slot, busy: false, turnStart: undefined };
@@ -201,8 +204,12 @@ function applyEventToSlot(slot: SessionSlot, id: number, event: DomainEvent): Se
         return { ...slot, items: chatReducer(slot.items, { type: "assistantDelta", id, text: event.text }) };
       }
       if (event.kind === "text_done") {
-        // The reply is complete — collapse this turn's work content.
-        return { ...slot, items: chatReducer(slot.items, { type: "collapseAll" }) };
+        // NOTE: no state change here — pi fires text_end per text BLOCK, and
+        // a multi-part reply (text → tool → text) would collapse the work
+        // content mid-generation. The collapse happens on session.turn end
+        // (agent_end = the agent is genuinely done). Text content is already
+        // complete via the delta stream.
+        return slot;
       }
       if (event.kind === "user_queued") {
         // pi injected a queued message into the loop — move it into the

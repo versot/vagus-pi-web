@@ -140,16 +140,15 @@ export function ChatPane(props: {
   const groups = useMemo(() => groupChatItems(dedupeThinking(items)), [items]);
   // Extension-UI cards anchor to the work block containing the TOOL CALL that
   // triggered them (toolCallId is stamped by the engine and survives reloads).
-  // This is immune to missing turn records in the session file. Cards without
-  // a usable toolCallId fall back to turn matching, then the last tool block.
+  // This is immune to missing turn records in the session file. Matching is
+  // toolCallId first, turn second; NO third fallback — an unmatched card
+  // renders only while pending (see the unmatched section below).
   const cardsByTurn = useMemo(() => {
     // toolCallId → group index (the work block that ran that tool).
     const toolToGroup = new Map<string, number>();
     // turn (user-message ordinal) → first work-block index of that turn.
     const turnToGroup = new Map<number, number>();
     let turnNo = 0;
-    let lastWorkIdx = -1;
-    let lastToolWorkIdx = -1;
     for (let i = 0; i < groups.length; i++) {
       const g = groups[i]!;
       if (g.kind === "item" && g.item.kind === "user") {
@@ -157,12 +156,10 @@ export function ChatPane(props: {
         continue;
       }
       if (g.kind === "work") {
-        lastWorkIdx = i;
         if (!turnToGroup.has(turnNo)) turnToGroup.set(turnNo, i);
         for (const w of g.work) {
           if (w.kind === "tool" && w.toolCallId) toolToGroup.set(w.toolCallId, i);
         }
-        if (g.work.some((w) => w.kind === "tool")) lastToolWorkIdx = i;
       }
     }
     const byIdx = new Map<number, UiCardItem[]>();
@@ -171,12 +168,10 @@ export function ChatPane(props: {
       const ev = c.event as { turn?: number; toolCallId?: string };
       let gi = ev.toolCallId ? toolToGroup.get(ev.toolCallId) : undefined;
       if (gi === undefined) gi = ev.turn === undefined ? undefined : turnToGroup.get(ev.turn);
-      if (gi === undefined) {
-        // Fallback: latest tool-bearing block, then any work block. This only
-        // catches cards with NO usable anchor (no toolCallId and no turn) —
-        // never the whole history: matched cards above keep their own group.
-        gi = lastToolWorkIdx >= 0 ? lastToolWorkIdx : lastWorkIdx >= 0 ? lastWorkIdx : undefined;
-      }
+      // NO fallback-to-latest-block: an unmatched card's context simply
+      // isn't loaded yet (lazy pagination) — piling answered history onto
+      // the newest tool block was the "history clumps at the bottom" bug.
+      // Pending cards still render via the unmatched section below.
       if (gi !== undefined) {
         const arr = byIdx.get(gi) ?? [];
         arr.push(c);
@@ -184,7 +179,7 @@ export function ChatPane(props: {
         matched.add(c.event.id);
       }
     }
-    const unmatched = uiCards.filter((c) => !matched.has(c.event.id));
+    const unmatched = uiCards.filter((c) => c.event.id === undefined || !matched.has(c.event.id));
     return { byIdx, unmatched };
   }, [groups, uiCards]);
 
@@ -389,12 +384,13 @@ export function ChatPane(props: {
             }
             return <>{out}</>;
           })()}
-          {/* Unmatched extension-UI cards (no tool-bearing work block — e.g.
-              /rpc-input command) render at the stream end so they never
-              silently disappear. */}
-          {cardsByTurn.unmatched.length > 0 && (
+          {/* Unmatched PENDING cards only (waiting for an answer — they must
+              always be visible). Answered cards that don't match yet have
+              their context unloaded (lazy pagination); they anchor once the
+              user scrolls up and their turn's messages load. */}
+          {cardsByTurn.unmatched.some((c) => c.status === "pending") && (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {cardsByTurn.unmatched.map((card, i) => (
+              {cardsByTurn.unmatched.filter((c) => c.status === "pending").map((card, i) => (
                 <div key={`uicardwrap-${card.event.id ?? i}`} data-uicard-id={card.event.id} data-uicard-status={card.status}>
                   <UiCard
                     card={card}
