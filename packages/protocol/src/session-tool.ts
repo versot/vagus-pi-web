@@ -29,6 +29,9 @@ export const sessionToolResultEvent = z.object({
   name: z.string(),
   /** Serialized result text, truncated for display. */
   result: z.string(),
+  /** Edited file path (resolved from tool args at the engine, pre-truncation)
+   *  — lets the UI label turn summaries without guessing from truncated args. */
+  file: z.string().optional(),
   /** File-edit diff (pi's display format, `+/ -/ space` lines) — present for
    *  edit tools so UIs can render a Claude-Code-style red/green diff. */
   diff: z.string().optional(),

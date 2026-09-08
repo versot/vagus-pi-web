@@ -125,21 +125,17 @@ describe("VagusEngine", () => {
 
     const views = host.readSessionMessages(fixture);
 
-    expect(views.map((v) => v.role)).toEqual(["user", "assistant", "tool", "assistant", "user"]);
+    expect(views.map((v) => v.role)).toEqual(["user", "assistant", "assistant", "user"]);
     // First assistant has thinking + toolCall + text
     expect(views[1]?.text).toBe("running now");
     expect(views[1]?.thinking).toBe("let me think");
     expect(views[1]?.toolCalls).toHaveLength(1);
     expect(views[1]?.toolCalls?.[0]?.name).toBe("bash");
     expect(views[1]?.toolCalls?.[0]?.result).toBe("hi");
-    // The toolResult row is now its own synthesized tool view (real toolCallId).
-    expect(views[2]?.role).toBe("tool");
-    expect(views[2]?.toolCalls?.[0]?.id).toBe("call_1");
-    expect(views[2]?.toolCalls?.[0]?.result).toBe("hi");
     // Second assistant has thinking + text (no tool call)
-    expect(views[3]?.text).toBe("**hi** world");
-    expect(views[3]?.thinking).toBe("all good");
-    expect(views[3]?.toolCalls).toBeUndefined();
+    expect(views[2]?.text).toBe("**hi** world");
+    expect(views[2]?.thinking).toBe("all good");
+    expect(views[2]?.toolCalls).toBeUndefined();
 
     host.close();
   });

@@ -27,6 +27,8 @@ export type ChatItem =
       id: number;
       kind: "tool";
       toolCallId: string;
+      /** Edited file (engine-resolved, pre-truncation) — set by toolCallFinished. */
+      file?: string;
       name: string;
       args: string;
       status: "running" | "succeeded" | "failed";
@@ -52,7 +54,7 @@ export type ChatAction =
       name: string;
       args: string;
     }
-  | { type: "toolCallFinished"; toolCallId: string; result: string; isError: boolean; diff?: string; patch?: string }
+  | { type: "toolCallFinished"; toolCallId: string; result: string; isError: boolean; file?: string; diff?: string; patch?: string }
   | { type: "thinkingDelta"; id: number; text: string }
   | { type: "thinkingDone"; id: number }
   | { type: "collapseAll" }
@@ -95,6 +97,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
           ...item,
           status: action.isError ? "failed" : "succeeded",
           result: action.result,
+          ...(action.file !== undefined ? { file: action.file } : {}),
           ...(action.diff !== undefined ? { diff: action.diff } : {}),
           ...(action.patch !== undefined ? { patch: action.patch } : {}),
           collapsed: true,
@@ -206,26 +209,6 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
           if (message.role === "assistant") {
             items.push({ id: base + 100, kind: "assistant", text: message.text });
           }
-          if (message.role === "tool") {
-            // Engine-synthesized tool trend (pi persists only toolResult rows;
-            // see vagus-engine buildMessageViews). Render as a tool block only.
-            for (let c = 0; c < (message.toolCalls ?? []).length; c++) {
-              const call = message.toolCalls![c]!;
-              items.push({
-                id: base + 1 + c,
-                kind: "tool",
-                toolCallId: call.id || `hist-${i}-${c}`,
-                name: call.name,
-                args: call.args,
-                status: call.isError === true ? "failed" : "succeeded",
-                result: call.result,
-                ...(call.diff !== undefined ? { diff: call.diff } : {}),
-                ...(call.patch !== undefined ? { patch: call.patch } : {}),
-                collapsed: true,
-              });
-              turnWorkLast = rebuilt.length + items.length - 1;
-            }
-          }
           if (message.role === "system") {
             // Compaction/branch-summary notes and engine notices.
             items.push({ id: base + 100, kind: "system", text: message.text });
@@ -259,24 +242,6 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         if (message.thinking) {
           items.push({ id: base, kind: "thinking", text: message.thinking, collapsed: true });
           turnWorkLast = earlier.length + items.length - 1;
-        }
-        if (message.role === "tool") {
-          for (let c = 0; c < (message.toolCalls ?? []).length; c++) {
-            const call = message.toolCalls![c]!;
-            items.push({
-              id: base + 1 + c,
-              kind: "tool",
-              toolCallId: call.id || `hist-${i}-${c}`,
-              name: call.name,
-              args: call.args,
-              status: call.isError === true ? "failed" : "succeeded",
-              result: call.result,
-              ...(call.diff !== undefined ? { diff: call.diff } : {}),
-              ...(call.patch !== undefined ? { patch: call.patch } : {}),
-              collapsed: true,
-            });
-            turnWorkLast = earlier.length + items.length - 1;
-          }
         }
         if (message.toolCalls) {
           for (let c = 0; c < message.toolCalls.length; c++) {

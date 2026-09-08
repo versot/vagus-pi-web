@@ -248,6 +248,7 @@ function applyEventToSlot(slot: SessionSlot, id: number, event: DomainEvent): Se
           toolCallId: event.toolCallId,
           result: event.result,
           isError: event.isError,
+          ...(event.file !== undefined ? { file: event.file } : {}),
           ...(event.diff !== undefined ? { diff: event.diff } : {}),
           ...(event.patch !== undefined ? { patch: event.patch } : {}),
         }),

@@ -1,13 +1,15 @@
 import { spawn } from "node:child_process";
 
 /** Spawn a process, capture stdout + exit code (never throws). */
-function runCapture(cmd: string, args: string[]): Promise<{ stdout: string; code: number }> {
+function runCapture(cmd: string, args: string[]): Promise<{ stdout: string; code: number; stderr: string }> {
   return new Promise((res) => {
     const child = spawn(cmd, args, { windowsHide: true });
     let stdout = "";
+    let stderr = "";
     child.stdout?.on("data", (d: Buffer) => { stdout += String(d); });
-    child.on("error", () => res({ stdout, code: 1 }));
-    child.on("close", (code) => res({ stdout, code: code ?? 1 }));
+    child.stderr?.on("data", (d: Buffer) => { stderr += String(d); });
+    child.on("error", () => res({ stdout, stderr, code: 1 }));
+    child.on("close", (code) => res({ stdout, stderr, code: code ?? 1 }));
   });
 }
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
@@ -326,36 +328,11 @@ export class VagusEngine {
       }
       if (entry.type !== "message" || !entry.message) continue;
       const role = String(entry.message.role);
-      if (role === "toolResult") {
-        // pi only persists tool results as toolResult rows (assistant rows
-        // carry no toolCalls) — rebuild a tool trend so reloaded sessions
-        // show the same tool cards/blocks as the live stream, and ui.history
-        // cards can anchor to their triggering tool by the REAL toolCallId.
-        const m = entry.message as { toolCallId?: unknown; toolName?: unknown; isError?: unknown };
-        if (typeof m.toolCallId === "string") {
-          const tid = m.toolCallId;
-          const res = resultsById.get(tid);
-          views.push({
-            role: "tool" as SessionMessage["role"],
-            text: "",
-            toolCalls: [{
-              id: tid,
-              name: typeof m.toolName === "string" ? m.toolName : "tool",
-              args: "",
-              ...(res
-                ? {
-                    result: truncateDisplay(res.result, 20_000),
-                    isError: res.isError,
-                    ...(res.diff !== undefined ? { diff: res.diff } : {}),
-                    ...(res.patch !== undefined ? { patch: res.patch } : {}),
-                  }
-                : {}),
-            }],
-          });
-        }
-        continue; // consumed (not folded into an assistant message)
-      }
-
+      if (role === "toolResult") continue;
+      // NOTE: toolResult rows stay skipped above — pi's assistant content
+      // blocks DO carry toolCall declarations (parseContentBlocks extracts
+      // them) and the resultsById pass folds each result/diff into that same
+      // toolCall, so no separate tool view is synthesized.
       const entryTs = new Date(entry.timestamp).getTime();
       if (role === "user") closeTurn(); // a new question ends the previous turn
 
@@ -491,7 +468,7 @@ export class VagusEngine {
       const rl = createInterface({ input: createReadStream(file, { encoding: "utf8" }), crlfDelay: Infinity });
       for await (const line of rl) {
         if (line.trim() === "") continue;
-        let e: { type?: unknown; timestamp?: unknown; message?: { role?: unknown; text?: unknown; content?: unknown } } | undefined;
+        let e: { type?: unknown; timestamp?: unknown; name?: unknown; message?: { role?: unknown; text?: unknown; content?: unknown } } | undefined;
         try { e = JSON.parse(line) as typeof e; } catch { continue; }
         if (!e) continue;
         if (!header) {
@@ -502,6 +479,12 @@ export class VagusEngine {
           name = typeof h.name === "string" && h.name.trim() !== "" ? h.name.trim() : undefined;
           id = typeof h.id === "string" ? h.id : "";
           createdTs = typeof h.timestamp === "string" ? new Date(h.timestamp).getTime() : NaN;
+          continue;
+        }
+        if (e.type === "session_info") {
+          // Rename appends a session_info row — latest wins (mirrors pi).
+          const n = typeof e.name === "string" ? e.name.trim() : "";
+          if (n !== "") name = n;
           continue;
         }
         const ts = typeof e.timestamp === "string" ? new Date(e.timestamp).getTime() : NaN;
@@ -1568,18 +1551,19 @@ export class VagusEngine {
       return { path: p === "" ? null : p };
     }
     if (platform === "darwin") {
-      const script = [
-        "try",
-        "with timeout of 3600 seconds",
-        'set selectedFolder to choose folder with prompt "选择工作目录"',
-        "POSIX path of selectedFolder",
-        "on error number -128",
-        'return ""',
-        "end try",
-      ].join("\n");
-      const { stdout, code } = await runCapture("osascript", ["-e", script]);
-      const p = stdout.trim().replace(/\/$/, "");
-      return { path: code === 0 && p !== "" ? p : null };
+      // Two -e statements (mirrors the proven harness pattern — a multi-line
+      // single -e is fragile). Cancel = exit 1 + "User canceled"/-128 in
+      // stderr; any OTHER failure must surface, not silently no-op.
+      const { stdout, stderr, code } = await runCapture("osascript", [
+        "-e", 'set selectedFolder to choose folder with prompt "Select Workspace Directory"',
+        "-e", "POSIX path of selectedFolder",
+      ]);
+      if (code === 0) {
+        const p = stdout.trim().replace(/\/$/, "");
+        return { path: p === "" ? null : p };
+      }
+      if (/(?:User canceled|-128)/i.test(stderr)) return { path: null };
+      throw new Error("macOS 目录选择器打开失败：" + (stderr.trim() || "exit " + code));
     }
     if (platform === "linux") {
       let { stdout, code } = await runCapture("zenity", ["--file-selection", "--directory", "--title=选择工作目录"]);
@@ -1874,6 +1858,9 @@ export class VagusEngine {
         const patch = extractToolPatch(event.result);
         const baseline = this.toolBaselines.get(event.toolCallId);
         this.toolBaselines.delete(event.toolCallId);
+        // Edited file recorded at start (path-carrying tools only) — the end
+        // event carries no args, so the baseline is the reliable source.
+        const editedFile = baseline?.path;
         if (baseline && diff === undefined) {
           // Tools without pi's diff (write, and some bash variants): compute one
           // from the pre-tool content we captured.
@@ -1887,6 +1874,7 @@ export class VagusEngine {
                 sessionId,
                 toolCallId: event.toolCallId,
                 name: event.toolName,
+                ...(editedFile ? { file: editedFile } : {}),
                 result: toolResultText(event.result),
                 isError: event.isError,
                 diff: ours.diff,
@@ -1926,6 +1914,7 @@ export class VagusEngine {
           sessionId,
           toolCallId: event.toolCallId,
           name: event.toolName,
+          ...(editedFile ? { file: editedFile } : {}),
           result: toolResultText(event.result),
           isError: event.isError,
           ...(diff !== undefined ? { diff } : {}),

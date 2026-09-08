@@ -167,7 +167,13 @@ export function ChatPane(props: {
     for (const c of uiCards) {
       const ev = c.event as { turn?: number; toolCallId?: string };
       let gi = ev.toolCallId ? toolToGroup.get(ev.toolCallId) : undefined;
-      if (gi === undefined) gi = ev.turn === undefined ? undefined : turnToGroup.get(ev.turn);
+      // Turn matching is for PENDING cards only: an answered card must anchor
+      // to its exact tool or stay hidden. The global turn ordinal does not
+      // line up with the lazy-load window, so turn-matching answered history
+      // clumps cards onto whichever block the window happens to contain.
+      if (gi === undefined && c.status === "pending" && ev.turn !== undefined) {
+        gi = turnToGroup.get(ev.turn);
+      }
       // NO fallback-to-latest-block: an unmatched card's context simply
       // isn't loaded yet (lazy pagination) — piling answered history onto
       // the newest tool block was the "history clumps at the bottom" bug.

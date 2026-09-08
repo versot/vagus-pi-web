@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { tr } from "@vagus/ui-shared";
 import { useTokens } from "@vagus/ui-tokens";
 import { DiffView, groupChatItems, normalizePath } from "@vagus/ui-chat";
@@ -62,13 +62,12 @@ export function DiffTabContent({
     }
     return [];
   }, [turnId, items]);
-  // Multiple files can be expanded at once; restored files win, else the first
-  // file. The component is remounted (key) across sessions/turns so this is
-  // correct on first paint.
+  // Accordion behavior: clicking a row expands it and collapses all others
+  // (from either the in-panel row click or a chat-pane diff click). Clicking
+  // the open row collapses it. Persisted files ([] = all collapsed) win on
+  // first paint; `undefined` = never set — default to the first file.
   const [expanded, setExpanded] = useState<Set<string>>(() => {
     const init = new Set<string>();
-    // Persisted open files ([] = all collapsed). `undefined` = never set —
-    // default to the first file.
     if (expandedFiles !== undefined) {
       for (const f of expandedFiles) {
         if (entries.some((s) => normalizePath(s.file) === normalizePath(f))) init.add(f);
@@ -78,11 +77,29 @@ export function DiffTabContent({
     }
     return init;
   });
+  // Follow the host's expanded-files list — openFileDiff always sends a
+  // single-file array ([clickedFile]), so this enforces the accordion even
+  // when `selected` is unchanged (e.g. re-clicking the restored file after a
+  // reload, where a stale multi-open state came back from localStorage).
+  useEffect(() => {
+    if (expandedFiles === undefined) return;
+    setExpanded(new Set(expandedFiles.filter((f) => entries.some((e2) => normalizePath(e2.file) === normalizePath(f)))));
+  }, [expandedFiles, entries]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Clicking a diff row in the CHAT (left) pane updates `selected` — same
+  // accordion: expand the clicked file, collapse the others.
+  useEffect(() => {
+    if (!selected) return;
+    const hit = entries.find((e2) => normalizePath(e2.file) === normalizePath(selected));
+    if (!hit) return;
+    setExpanded(new Set([hit.file]));
+  }, [selected, entries]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const isOpenRow = (file: string): boolean => [...expanded].some((e) => normalizePath(e) === normalizePath(file));
   const toggle = (file: string): void => {
-    const next = new Set(expanded);
-    if (isOpenRow(file)) next.delete([...next].find((e) => normalizePath(e) === normalizePath(file))!);
-    else next.add(file);
+    // Accordion: the clicked file becomes the ONLY open one; clicking the
+    // already-open file collapses it (panel fully collapsed).
+    const next = new Set<string>();
+    if (!isOpenRow(file)) next.add(file);
     setExpanded(next);
     onOpenChange?.(next.size > 0 ? [...next] : undefined);
   };
@@ -91,7 +108,12 @@ export function DiffTabContent({
 
   if (entries.length === 0) return empty;
   return (
-    <div style={{ display: "flex", flexDirection: "column", padding: "6px 0" }}>
+    <div style={{
+      display: "flex", flexDirection: "column", padding: "6px 0",
+      // Fill the panel and scroll vertically — the panel's content area is
+      // overflow:hidden (it hosts multiple tabs), so scrolling lives here.
+      height: "100%", overflowY: "auto", overflowX: "hidden",
+    }}>
       {entries.map((entry, idx) => {
           const slash = entry.file.lastIndexOf("/");
           const dir = slash >= 0 ? entry.file.slice(0, slash + 1) : "";

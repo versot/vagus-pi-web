@@ -60,7 +60,9 @@ export function collectEdits(items: ChatItem[]): FileEdit[] {
   for (const item of items) {
     if (item.kind !== "tool" || !item.diff || !item.toolCallId) continue;
     out.push({
-      file: fileFromArgs(item.args),
+      // Prefer the engine-resolved path (raw args, pre-truncation); guessing
+      // from serialized args fails on truncated JSON (large file edits).
+      file: item.file ?? fileFromArgs(item.args),
       toolCallId: item.toolCallId,
       diff: item.diff,
       patch: item.patch,
