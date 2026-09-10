@@ -1175,6 +1175,7 @@ export function App({ transport: injectedTransport }: AppProps): JSX.Element {
             wide={sidebarCollapsed}
             items={active.items}
             busy={active.busy}
+            errored={active.errored}
             turnStartTs={active.turnStart}
             sessionLoading={sessionLoading}
             showLoading={showLoading}

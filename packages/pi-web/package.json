@@ -1,6 +1,6 @@
 {
   "name": "@versot/pi-web",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "pi-web — a web frontend for the pi coding agent. Launch the full chat UI in your browser with one command.",
   "keywords": [
     "pi",
@@ -36,5 +36,8 @@
   },
   "scripts": {
     "build": "node scripts/build-npx.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

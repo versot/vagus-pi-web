@@ -27,6 +27,13 @@ export class WebSocketTransport implements Transport {
   /** Frames queued before the WebSocket opens — flushed on connect. */
   private readonly pendingFrames: Frame[] = [];
   private opened = false;
+  /** Heartbeat: macOS sleep / NAT timeouts silently sever the TCP link while
+   *  readyState stays OPEN — a send into that dead socket vanishes with no
+   *  error and no close event. A ping every 25s detects it: no pong within
+   *  10s ⇒ force onClose so the client can reconnect and flush queued sends. */
+  private heartbeatTimer: ReturnType<typeof setInterval> | undefined;
+  private pongTimer: ReturnType<typeof setTimeout> | undefined;
+  private closedNotified = false;
 
   constructor({ url, onOpen, onClose }: WebSocketTransportOptions) {
     this.onOpen = onOpen;
@@ -40,19 +47,53 @@ export class WebSocketTransport implements Transport {
         this.ws.send(JSON.stringify(frame));
       }
       this.pendingFrames.length = 0;
+      this.startHeartbeat();
       this.onOpen?.();
     });
     this.ws.addEventListener("message", (event: MessageEvent) => {
       try {
-        const frame = JSON.parse(String(event.data)) as Frame;
+        const raw = JSON.parse(String(event.data)) as { type?: string };
+        if (raw.type === "pong") {
+          if (this.pongTimer) clearTimeout(this.pongTimer);
+          return;
+        }
+        const frame = raw as Frame;
         for (const listener of this.listeners) listener(frame);
       } catch {
         // malformed frame — ignore
       }
     });
     this.ws.addEventListener("close", (event: CloseEvent) => {
-      this.onClose?.(event.code, event.reason);
+      this.stopHeartbeat();
+      this.notifyClosed(event.code, event.reason);
     });
+  }
+
+  private startHeartbeat(): void {
+    this.stopHeartbeat();
+    this.heartbeatTimer = setInterval(() => {
+      this.ws.send(JSON.stringify({ type: "ping" }));
+      if (this.pongTimer) clearTimeout(this.pongTimer);
+      this.pongTimer = setTimeout(() => {
+        // No pong — the link is dead even though readyState says OPEN.
+        this.stopHeartbeat();
+        this.ws.close();
+        this.notifyClosed(4000, "heartbeat timeout");
+      }, 10_000);
+    }, 25_000);
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+    if (this.pongTimer) clearTimeout(this.pongTimer);
+    this.heartbeatTimer = undefined;
+    this.pongTimer = undefined;
+  }
+
+  private notifyClosed(code: number, reason: string): void {
+    if (this.closedNotified) return;
+    this.closedNotified = true;
+    this.onClose?.(code, reason);
   }
 
   send(frame: Frame): void {
@@ -70,6 +111,7 @@ export class WebSocketTransport implements Transport {
   }
 
   close(): void {
+    this.stopHeartbeat();
     this.ws.close();
     this.listeners.clear();
   }

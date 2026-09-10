@@ -1801,7 +1801,13 @@ export class VagusEngine {
         return;
       }
       if (event.type === "agent_end") {
-        void this.options.bus.emit("session.turn", { type: "session.turn", sessionId, kind: "end" });
+        // Error/aborted terminations keep the work block OPEN (the user must
+        // see where it failed) — normal completion collapses it.
+        const msgs = (event as { messages?: Array<{ role?: unknown; errorMessage?: unknown; stopReason?: unknown }> }).messages ?? [];
+        const last = msgs[msgs.length - 1];
+        const errored =
+          typeof last?.errorMessage === "string" && last.errorMessage !== "" ? true : last?.stopReason === "error" || last?.stopReason === "aborted";
+        void this.options.bus.emit("session.turn", { type: "session.turn", sessionId, kind: "end", errored });
         return;
       }
       if (event.type === "turn_start" || event.type === "turn_end") {

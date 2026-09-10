@@ -137,6 +137,15 @@ type ChatGroup =
  * The trailing assistant text(s) with no work after them are the final
  * answer and stay plain, right below the work block.
  */
+/** Turn-boundary notes (compaction / branch summary / compacting marker)
+ *  mark a NEW phase — they stay standalone items and flush the work block.
+ *  Everything else (inline errors, notices) belongs to the CURRENT work
+ *  content: an error mid-turn must not split the work block, because the
+ *  agent's retry continues the same work right after it. */
+function isTurnBoundaryNote(text: string): boolean {
+  return text.startsWith("◌ 前文已摘要") || text.startsWith("◔ 分支摘要") || text.startsWith("正在压缩");
+}
+
 export function groupChatItems(items: ChatItem[]): ChatGroup[] {
   const out: ChatGroup[] = [];
   let work: ChatItem[] = [];
@@ -190,7 +199,8 @@ export function groupChatItems(items: ChatItem[]): ChatGroup[] {
       let workInTurn = work.length > 0;
       for (let j = i + 1; j < items.length; j++) {
         const nxt = items[j]!;
-        if (nxt.kind === "user" || nxt.kind === "system") break; // next turn
+        if (nxt.kind === "user") break; // next turn
+        if (nxt.kind === "system" && isTurnBoundaryNote(nxt.text)) break; // next phase
         if (nxt.kind === "thinking" || nxt.kind === "tool") {
           workInTurn = true;
           trailingFinal = false;
@@ -200,11 +210,17 @@ export function groupChatItems(items: ChatItem[]): ChatGroup[] {
           trailingFinal = false;
           break;
         }
+        // non-boundary system (inline error) — keep scanning, the retry
+        // continues after it
       }
       if (trailingFinal || !workInTurn) finalReply.push(item);
       else work.push(item);
+    } else if (item.kind === "system" && !isTurnBoundaryNote(item.text)) {
+      // Inline error/notice mid-turn: part of the work content, NOT a turn
+      // boundary — the agent retries into the same work block after it.
+      work.push(item);
     } else {
-      // user / system: a new turn begins — flush the previous one.
+      // user / boundary-note: a new turn begins — flush the previous one.
       flushTurn();
       out.push({ kind: "item", item });
     }

@@ -43,6 +43,8 @@ export interface SessionSlot {
   turnStart?: number;
   /** User messages queued for steering (pi's authoritative queue). */
   queued: QueuedMessage[];
+  /** True when the last turn ended with an error/abort — its work block stays open. */
+  errored?: boolean;
   thinkingLevel?: string;
   info?: SessionInfo;
   /** True when older messages exist (lazy-load pagination). */
@@ -190,13 +192,15 @@ function applyEventToSlot(slot: SessionSlot, id: number, event: DomainEvent): Se
       if (slot.turnStart !== undefined) {
         // Agent genuinely finished: stamp the turn duration, then collapse
         // the turn's work content (the auto-open during streaming is over).
+        // ERRORED turns stay open — the user must see where it failed.
+        const errored = (event as { errored?: boolean }).errored === true;
         let items = chatReducer(slot.items, {
           type: "turnEnd",
           startedAt: slot.turnStart,
           endedAt: Date.now(),
         });
-        items = chatReducer(items, { type: "collapseAll" });
-        return { ...slot, busy: false, turnStart: undefined, items };
+        if (!errored) items = chatReducer(items, { type: "collapseAll" });
+        return { ...slot, busy: false, turnStart: undefined, items, errored };
       }
       return { ...slot, busy: false, turnStart: undefined };
     case "session.message":
@@ -214,8 +218,10 @@ function applyEventToSlot(slot: SessionSlot, id: number, event: DomainEvent): Se
       if (event.kind === "user_queued") {
         // pi injected a queued message into the loop — move it into the
         // timeline. Queue removal is driven by queue_update (authoritative).
+        // A queued message starts a new phase — clear the previous turn's
+        // error flag so its work block may collapse normally again.
         const images = (event as { images?: Array<{ dataUrl: string; mimeType: string }> }).images;
-        return { ...slot, items: chatReducer(slot.items, { type: "userMessage", id, text: event.text, ...(images && images.length > 0 ? { images } : {}) }) };
+        return { ...slot, items: chatReducer(slot.items, { type: "userMessage", id, text: event.text, ...(images && images.length > 0 ? { images } : {}) }), errored: undefined };
       }
       if (event.kind === "error") {
         // Model/loop failure surfaced by pi — show it inline instead of a

@@ -10,5 +10,8 @@ export const sessionTurnEvent = z.object({
   type: z.literal("session.turn"),
   sessionId: z.string(),
   kind: z.enum(["start", "end"]),
+  /** True when the run ended with an error/abort — the UI keeps the work
+   *  block open so the user can inspect where it failed. */
+  errored: z.boolean().optional(),
 });
 export type SessionTurnEvent = z.infer<typeof sessionTurnEvent>;

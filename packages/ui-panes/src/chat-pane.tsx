@@ -22,6 +22,8 @@ import type { Autoscroll } from "@vagus/ui-hooks";
 export function ChatPane(props: {
   items: ChatItem[];
   busy: boolean;
+  /** Last turn ended with an error/abort — keep the work block open. */
+  errored?: boolean;
   turnStartTs?: number;
   /** Whether the session is being opened from disk (loading spinner). */
   sessionLoading: boolean;
@@ -262,8 +264,10 @@ export function ChatPane(props: {
                 break;
               }
             }
+            // Errored turn: stay live (block open) even after busy=false —
+            // the user must be able to inspect where it failed.
             const liveGroup =
-              busy && curWorkItem !== undefined
+              (busy || props.errored) && curWorkItem !== undefined
                 ? groups.find((g) => g.kind === "work" && g.work.some((w) => w.id === curWorkItem?.id))
                 : undefined;
             // Extension-UI cards anchor to the work block of the TURN they

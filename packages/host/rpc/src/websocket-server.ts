@@ -94,7 +94,14 @@ export class WsServerHost {
 
       ws.on("message", (raw: Buffer) => {
         try {
-          const frame = JSON.parse(raw.toString()) as Frame;
+          const parsed = JSON.parse(raw.toString()) as { type?: string };
+          // Client heartbeat — answer before Frame validation (ping/pong are
+          // transport-level, not part of the Frame union).
+          if (parsed.type === "ping") {
+            if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: "pong" }));
+            return;
+          }
+          const frame = parsed as Frame;
           void server.handleFrame(frame);
         } catch {
           // malformed JSON — ignore
