@@ -333,7 +333,7 @@ export function SessionSidebar({
       {/* Brand —— 固定高 54，底部横线与中间栏/第三栏对齐成一根 */}
       <div style={{ flex: "none", height: 54, display: "flex", alignItems: "center", gap: 8, padding: "0 16px", borderBottom: `1px solid ${t.color.border}` }}>
         <span style={{ width: 26, height: 26, borderRadius: 7, background: `linear-gradient(135deg,${BRAND_A},${BRAND_B})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "0.93em", fontWeight: 700, flexShrink: 0, boxShadow: "0 2px 6px rgba(99,102,241,0.4)" }}>◈</span>
-        <span style={{ fontSize: "1.05em", fontWeight: 700, color: t.color.fg }}>vagusPI</span>
+        <span style={{ fontSize: "1.05em", fontWeight: 700, color: t.color.fg }}>Pi</span>
         <span style={{ flex: 1 }} />
         <button
           title={tr("收起侧栏")}

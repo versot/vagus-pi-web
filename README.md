@@ -1,10 +1,10 @@
-# vagusPI
+# pi-web
 
 English | [中文](README.zh.md)
 
-vagusPI is an open-source **web GUI for the [pi coding agent](https://pi.dev)**.
+pi-web is an open-source **web GUI for the [pi coding agent](https://pi.dev)**.
 
-It is not a separate agent or an isolated workspace. vagusPI reads and writes
+It is not a separate agent or an isolated workspace. pi-web reads and writes
 the *same* `~/.pi/agent` configuration — models, sessions, packages, and
 settings — that the pi CLI uses, so everything you do in the browser is
 available in the terminal and vice versa. Your data stays on your machine.
@@ -16,7 +16,7 @@ available in the terminal and vice versa. Your data stays on your machine.
 Install `Node.js >= 22`, then run:
 
 ```sh
-npx @versot/vaguspi web
+npx @versot/pi-web web
 ```
 
 The command starts the Web UI at `http://127.0.0.1:19707` and opens it in
@@ -25,7 +25,7 @@ your default browser. No installation required.
 ### Install as a pi package
 
 ```sh
-pi install npm:@versot/vaguspi
+pi install npm:@versot/pi-web
 ```
 
 Then launch with:

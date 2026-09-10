@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Builds the npx-publishable `@versot/vaguspi` package.
+ * Builds the npx-publishable `@versot/pi-web` package.
  *
- * `npx @versot/vaguspi web` must work with zero repo dependencies, so this
+ * `npx @versot/pi-web web` must work with zero repo dependencies, so this
  * assembles a self-contained package:
  *
  *   packages/pi-web/
- *   ├── package.json        # name @versot/vaguspi, bin: pi-web
+ *   ├── package.json        # name @versot/pi-web, bin: pi-web
  *   ├── dist/
  *   │   ├── bin.js          # CLI bundle (all workspace deps inlined)
  *   │   └── gui/            # web UI static assets

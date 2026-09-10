@@ -110,7 +110,7 @@ function probeRequestFor(apiType: string, url: string, apiKey: string | undefine
  * pi CLI, the pi agent studio VS Code plugin, …). Injecting a dev extension
  * there would make a buggy extension crash those unrelated tools (exit 1).
  * By scoping to web sessions, the GUI gets its built-ins while other pi
- * frontends stay untouched. The production pi-package (@versot/vaguspi) ships
+ * frontends stay untouched. The production pi-package (@versot/pi-web) ships
  * the same extensions via its `pi.extensions` manifest instead.
  */
 function builtinExtensionPaths(): string[] {
@@ -334,7 +334,7 @@ export async function runDaemon(): Promise<number> {
     });
 
     // Lists global skills (SKILL.md in ~/.pi/agent/skills/*/ and
-    // ~/.agents/skills/), deduped by name (vagusPI wins). Each entry carries
+    // ~/.agents/skills/), deduped by name (pi-web wins). Each entry carries
     // `enabled` (the user's enable/disable preference). The "/" command menu
     // still reads name/description, which these include.
     const readDisabledSkills = (): string[] => {

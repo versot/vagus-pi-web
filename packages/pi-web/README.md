@@ -1,4 +1,4 @@
-# @versot/vaguspi
+# @versot/pi-web
 
 A web frontend for the [pi coding agent](https://pi.dev). Launch the full
 chat UI in your browser — no pi install required.
@@ -7,10 +7,10 @@ chat UI in your browser — no pi install required.
 
 ```bash
 # Run without installing (recommended)
-npx @versot/vaguspi web
+npx @versot/pi-web web
 
 # Or global install then run
-npm install -g @versot/vaguspi
+npm install -g @versot/pi-web
 pi-web web
 ```
 
@@ -20,7 +20,7 @@ MCP servers, skills, and usage stats.
 ## Install as a pi package
 
 ```bash
-pi install npm:@versot/vaguspi
+pi install npm:@versot/pi-web
 ```
 
 Installs the web frontend into your pi package directory (`~/.pi/agent/npm/`)
@@ -29,7 +29,7 @@ and lists it on [pi.dev/packages](https://pi.dev/packages). Launch with:
 ```bash
 npx pi-web web
 # or
-~/.pi/agent/npm/@versot/vaguspi/dist/bin.js web
+~/.pi/agent/npm/@versot/pi-web/dist/bin.js web
 ```
 
 ## How it works

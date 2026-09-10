@@ -34,7 +34,7 @@ interface Command {
 const commands: Command[] = [
   {
     name: "daemon",
-    summary: "Start the vagusPI orchestration daemon",
+    summary: "Start the pi-web orchestration daemon",
     milestone: "ready",
     run: () => runDaemon(),
   },

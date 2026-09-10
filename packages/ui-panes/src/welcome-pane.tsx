@@ -40,7 +40,7 @@ export function WelcomePane(props: {
             color: "#fff", fontSize: 21, fontWeight: 700,
             boxShadow: "0 6px 24px rgba(99,102,241,0.35)",
           }}>◈</div>
-          <div style={{ fontSize: "1.4em", fontWeight: 700, color: t.color.fg, marginTop: 12, letterSpacing: "-0.01em" }}>vagusPI</div>
+          <div style={{ fontSize: "1.4em", fontWeight: 700, color: t.color.fg, marginTop: 12, letterSpacing: "-0.01em" }}>Pi</div>
           <div style={{ fontSize: "0.92em", color: t.color.muted, marginTop: 5 }}>
             {tr("你的编码智能体工作台 —— 发送第一条消息开始新的对话")}
           </div>

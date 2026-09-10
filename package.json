@@ -1,8 +1,8 @@
 {
-  "name": "vaguspi-monorepo",
+  "name": "pi-web-monorepo",
   "version": "0.1.0",
   "private": true,
-  "description": "vagusPI — a web GUI for the pi coding agent. Uses pi's own ~/.pi/agent config, so models, settings, packages, and sessions are shared with the pi CLI. Installable via `pi install npm:@versot/vaguspi`.",
+  "description": "pi-web — a web GUI for the pi coding agent. Uses pi's own ~/.pi/agent config, so models, settings, packages, and sessions are shared with the pi CLI. Installable via `pi install npm:@versot/pi-web`.",
   "keywords": ["pi-package", "pi-web", "gui", "web-ui"],
   "type": "module",
   "engines": {
